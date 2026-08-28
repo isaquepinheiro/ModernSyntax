@@ -14,6 +14,7 @@ correspondente e o ciclo ativo.
 |-------|-------|---------|--------|
 | 002 | [#8](https://github.com/isaquepinheiro/ModernSyntax/issues/8) | Implementar Pilar 1 — Leitura de RTTI (TModernRTTIType, TModernRTTIProperty, TModernRTTIField) | 📤 PR aberto — [#11](https://github.com/isaquepinheiro/ModernSyntax/pull/11) |
 | 003 | [#7](https://github.com/isaquepinheiro/ModernSyntax/issues/7) | Implementar callbacks transversais — IModernFunc, IModernProc, IModernPredicate + factory Callback.Of | 📤 PR aberto — [#12](https://github.com/isaquepinheiro/ModernSyntax/pull/12) |
+| 004 | [#9](https://github.com/isaquepinheiro/ModernSyntax/issues/9) | Implementar Pilar 2 — Atributos portáveis (ModernSyntax.Attributes.pas + cenários + cascas DUnitX e FPCUnit) | 📤 PR aberto — [#16](https://github.com/isaquepinheiro/ModernSyntax/pull/16) |
 | 004 | [#7](https://github.com/isaquepinheiro/ModernSyntax/issues/7) | Reimplementar callbacks transversais — nova iteração após plan-gate:on_reject (ciclo 003) | 📤 PR aberto — [#18](https://github.com/isaquepinheiro/ModernSyntax/pull/18) |
 
 ## Legenda
@@ -36,3 +37,9 @@ Epic adicional foi criada. Label atual: `aefos:running, feature`.
 `aefos:running, feature`. Entrega: `Source/ModernSyntax.Callback.pas` com
 três interfaces genéricas e factory `Callback.Of`; unit de cenários em
 `Test Shared/`; cascas finas DUnitX e FPCUnit.
+
+**Ciclo 004** — MAESTRO MODE. A issue #9 é a demanda oficial deste ciclo
+(intake do maestro). Nenhuma issue ou Epic adicional criada. Demanda:
+implementar `Source/ModernSyntax.Attributes.pas` com `TModernAttribute` e
+`ModernAttributes` (Register + GetAttributes + regra 2 do ADENDO), unit
+compartilhada de cenários e duas cascas finas (DUnitX + FPCUnit).
