@@ -1,0 +1,16 @@
+---
+okf_version: "0.2"
+---
+
+# Project knowledge bundle
+
+This bundle is the living memory of the project, in OKF format. Any agent or human can orient itself from here.
+
+## Navigation
+
+- [log.md](log.md) — the bundle log: what happened, in order (OKF reserved name)
+- [history/](history/index.md) — durable History: cycles, decisions, changes, incidents
+
+The pipeline adds `SKILL.md` (project conventions), `analysis/` (the Analyst dossier) and `project-evolution.md` (the board) as it produces them — link them here once they exist. The current cycle works in `.project/pipeline/`, which is git-ignored and never part of the committed bundle; its durable per-cycle copy is `history/cycles/cycle-NNN/pipeline-*.md`.
+
+RESERVED FILE (OKF SPEC.md §3.1) — the frontmatter block at the top of this file holds `okf_version` and nothing else — SPEC.md:774 calls a bundle-root `index.md` the ONLY place frontmatter is permitted in an `index.md` (see also SPEC.md:509-511). Adding any other key to it, or a frontmatter block to any OTHER `index.md` in the bundle, is itself a conformance failure (floor item 3, SPEC.md:740-741). To link a document once it exists, edit the body above and leave the frontmatter alone.
