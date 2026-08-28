@@ -1,20 +1,14 @@
 {
-      ModernSyntax - Functional Programming Toolkit for Delphi
+  ------------------------------------------------------------------------------
+  ModernSyntax
+  Functional programming toolkit and modern syntax extension for Delphi.
 
-                   Copyright (c) 2016, Isaque Pinheiro
-                          All rights reserved.
+  SPDX-License-Identifier: MIT
+  Copyright (c) 2025-2026 Isaque Pinheiro
 
-                    GNU Lesser General Public License
-                      Versão 3, 29 de junho de 2007
-
-       Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/>
-       A todos é permitido copiar e distribuir cópias deste documento de
-       licença, mas mudá-lo não é permitido.
-
-       Esta versão da GNU Lesser General Public License incorpora
-       os termos e condições da versão 3 da GNU General Public License
-       Licença, complementado pelas permissões adicionais listadas no
-       arquivo LICENSE na pasta principal.
+  Licensed under the MIT License.
+  See the LICENSE file in the project root for full license information.
+  ------------------------------------------------------------------------------
 }
 
 {
@@ -253,6 +247,17 @@
 {$ENDIF}
 
 //Lazarus
+// DEAD BLOCK - DO NOT "FIX" THE TYPO WITHOUT READING THIS.
+// The guard says FCP; the FPC/Lazarus symbol is FPC, so this block has never been taken.
+// Correcting it to {$IFDEF FPC} is not a no-op: it would start asserting that FPC provides
+// the Delphi 2010 feature level (DELPHI14_UP), a mapping nobody has ever compiled or tested
+// here - there is no FPC/Lazarus build of this library, and the declared floor is Delphi XE
+// (README.md:3 and README.md:33).
+// It is also, today, unobservable either way: this file is included by exactly one unit
+// (ModernSyntax.Objects.pas:16) and NO unit in the repository reads DELPHI14_UP - or any other
+// symbol defined below - so nothing changes behaviour whichever way the guard is spelled.
+// Left as-is on purpose: activating an unverified compatibility claim is worse than a typo in
+// code that no one reads. Fix it together with a real FPC target and a build that proves it.
 {$IFDEF FCP}
   {$DEFINE DELPHI14_UP}
 {$ENDIF}
@@ -263,8 +268,8 @@
 
 {$IFDEF DELPHI17_UP}
   {$DEFINE HAS_NET_ENCODING}
-{$ELSE IFDEF DELPHI16_UP}
+{$ELSEIF Defined(DELPHI16_UP)}
   {$DEFINE HAS_SOAP_ENCODING}
-{$ELSE
+{$ELSE}
   {$DEFINE HAS_ENCDDECD}
 {$ENDIF}
