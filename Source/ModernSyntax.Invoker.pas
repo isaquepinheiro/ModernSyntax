@@ -73,41 +73,41 @@ implementation
 class function TModernInvoker.Invoke<TSignature>(const AInstance: TObject;
   const AMethodName: string): TSignature;
 var
-  addr: Pointer;
-  m: TMethod;
+  LAddress: Pointer;
+  LMethod: TMethod;
 begin
   if SizeOf(TSignature) <> SizeOf(TMethod) then
     raise Exception.Create('TSignature nao e um tipo de metodo-de-objeto');
   if AInstance = nil then
     raise Exception.Create('AInstance e nil');
-  addr := AInstance.MethodAddress(AMethodName);
-  if addr = nil then
+  LAddress := AInstance.MethodAddress(AMethodName);
+  if LAddress = nil then
     raise Exception.CreateFmt(
       'metodo "%s" nao encontrado em %s; no FPC isso exige {$M+} e secao published',
       [AMethodName, AInstance.ClassName]);
-  m.Code := addr;
-  m.Data := AInstance;
-  Move(m, Result, SizeOf(TMethod));
+  LMethod.Code := LAddress;
+  LMethod.Data := AInstance;
+  Move(LMethod, Result, SizeOf(TMethod));
 end;
 
 class function TModernInvoker.Invoke<TSignature>(const AClass: TClass;
   const AMethodName: string): TSignature;
 var
-  addr: Pointer;
-  m: TMethod;
+  LAddress: Pointer;
+  LMethod: TMethod;
 begin
   if SizeOf(TSignature) <> SizeOf(TMethod) then
     raise Exception.Create('TSignature nao e um tipo de metodo-de-objeto');
   if AClass = nil then
     raise Exception.Create('AClass e nil');
-  addr := AClass.MethodAddress(AMethodName);
-  if addr = nil then
+  LAddress := AClass.MethodAddress(AMethodName);
+  if LAddress = nil then
     raise Exception.CreateFmt(
       'metodo "%s" nao encontrado em %s; no FPC isso exige {$M+} e secao published',
       [AMethodName, AClass.ClassName]);
-  m.Code := addr;
-  m.Data := Pointer(AClass);
-  Move(m, Result, SizeOf(TMethod));
+  LMethod.Code := LAddress;
+  LMethod.Data := Pointer(AClass);
+  Move(LMethod, Result, SizeOf(TMethod));
 end;
 
 end.
