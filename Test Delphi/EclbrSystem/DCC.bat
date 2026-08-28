@@ -141,5 +141,16 @@ CodeCoverage.exe ^
   -html ^
   -xmllines ^
   -v
-  
+
+CodeCoverage.exe ^
+  -m PTestRTTI.map ^
+  -e PTestRTTI.exe ^
+  -dproj PTestRTTI.dproj ^
+  -od CodeCoverage/RTTI ^
+  -emma ^
+  -xml ^
+  -html ^
+  -xmllines ^
+  -v
+
 timeout /t -1

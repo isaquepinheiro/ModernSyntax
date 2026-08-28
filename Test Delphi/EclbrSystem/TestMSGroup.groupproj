@@ -39,6 +39,9 @@
         <Projects Include="PTestDotEnv.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="PTestRTTI.dproj">
+            <Dependencies/>
+        </Projects>
         <Projects Include="..\..\Examples\CurryingDemo.dproj">
             <Dependencies/>
         </Projects>
@@ -158,6 +161,15 @@
     <Target Name="PTestDotEnv:Make">
         <MSBuild Projects="PTestDotEnv.dproj" Targets="Make"/>
     </Target>
+    <Target Name="PTestRTTI">
+        <MSBuild Projects="PTestRTTI.dproj"/>
+    </Target>
+    <Target Name="PTestRTTI:Clean">
+        <MSBuild Projects="PTestRTTI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="PTestRTTI:Make">
+        <MSBuild Projects="PTestRTTI.dproj" Targets="Make"/>
+    </Target>
     <Target Name="CurryingDemo">
         <MSBuild Projects="..\..\Examples\CurryingDemo.dproj"/>
     </Target>
@@ -168,13 +180,13 @@
         <MSBuild Projects="..\..\Examples\CurryingDemo.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="PTestMatch;PTestTuple;PTestResultPair;PTestStream;PTestObjects;PTestAsync;PTestCoroutine;PTestStd;PTestSafeTry;PTestCurrying;PTestOption;PTestDotEnv;CurryingDemo"/>
+        <CallTarget Targets="PTestMatch;PTestTuple;PTestResultPair;PTestStream;PTestObjects;PTestAsync;PTestCoroutine;PTestStd;PTestSafeTry;PTestCurrying;PTestOption;PTestDotEnv;PTestRTTI;CurryingDemo"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="PTestMatch:Clean;PTestTuple:Clean;PTestResultPair:Clean;PTestStream:Clean;PTestObjects:Clean;PTestAsync:Clean;PTestCoroutine:Clean;PTestStd:Clean;PTestSafeTry:Clean;PTestCurrying:Clean;PTestOption:Clean;PTestDotEnv:Clean;CurryingDemo:Clean"/>
+        <CallTarget Targets="PTestMatch:Clean;PTestTuple:Clean;PTestResultPair:Clean;PTestStream:Clean;PTestObjects:Clean;PTestAsync:Clean;PTestCoroutine:Clean;PTestStd:Clean;PTestSafeTry:Clean;PTestCurrying:Clean;PTestOption:Clean;PTestDotEnv:Clean;PTestRTTI:Clean;CurryingDemo:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="PTestMatch:Make;PTestTuple:Make;PTestResultPair:Make;PTestStream:Make;PTestObjects:Make;PTestAsync:Make;PTestCoroutine:Make;PTestStd:Make;PTestSafeTry:Make;PTestCurrying:Make;PTestOption:Make;PTestDotEnv:Make;CurryingDemo:Make"/>
+        <CallTarget Targets="PTestMatch:Make;PTestTuple:Make;PTestResultPair:Make;PTestStream:Make;PTestObjects:Make;PTestAsync:Make;PTestCoroutine:Make;PTestStd:Make;PTestSafeTry:Make;PTestCurrying:Make;PTestOption:Make;PTestDotEnv:Make;PTestRTTI:Make;CurryingDemo:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>
