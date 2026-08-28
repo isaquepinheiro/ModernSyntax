@@ -9,7 +9,7 @@
   Sem framework de teste. Sem `{$IFDEF}`. A excecao e o contrato — cada
   cenario levanta ETestScenarioFailed na falha.
 
-  Ver `.project/pipeline/esp.md` (RN-1..RN-10, CA-x.
+  Ver `.project/pipeline/esp.md` (RN-1 a RN-10, criterios CA).
   ------------------------------------------------------------------------------
 *)
 
