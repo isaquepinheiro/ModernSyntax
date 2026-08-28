@@ -16,7 +16,11 @@ tags: [stack, discovery, delphi, boss, dunitx, functional-programming]
 
 Confirmed: `Source/ModernSyntax.inc` lines 28–44 list the full compiler-version/symbol table; `VER220` at line 244 opens the first non-Lazarus block; `VER360` at line 56 opens the top block. The comment on line 28 marks Delphi 12 as `??` (version uncertain at authoring time).
 
-**Lazarus (FPC) compatibility:** a `{$IFDEF FCP}` block at `Source/ModernSyntax.inc:256` maps FPC to `DELPHI14_UP` only. No FPC build toolchain, no `.lpr` test project (`find "Test Delphi" -name "*.lpr" | wc -l` → 0), and Windows-only RTL imports make FPC compilation non-functional. The block is dead code; FPC is not a supported target.
+**Lazarus (FPC) compatibility:** a `{$IFDEF FCP}` block at `Source/ModernSyntax.inc:256` maps FPC to `DELPHI14_UP` only — note the typo: `FCP`, never defined, so the block is dead in both compilers. As measured at discovery time, the repository had no FPC build toolchain and no `.lpr` test project (`find "Test Delphi" -name "*.lpr" | wc -l` → 0).
+
+⚠️ **SUPERSEDED 2026-08-28 — FPC 3.2.2 IS a supported target from here on.** The sentence that used to close this paragraph, *"FPC is not a supported target"*, was true of the code as found and is **false of the project as decided**: `strategy/2026-08-27-modernrtti/PRD.md` makes portability to FPC/Lazarus the point of the ModernRTTI work. It is called out because a quality lens read that sentence and, obeying it, approved a Lazarus test project **by checking that the file existed** instead of building it — shipping PR #11, which does not compile. **The executable recipe now lives in `../SKILL.md`; read it before running anything.**
+
+What remains true, and is why the recipe matters: **0 of the 16 units in `Source/` compile under FPC 3.2.2 today**, and by the owner's standing decision they are **not** retrofitted — a unit is made portable only when a feature needs it, inside that feature's issue. New ModernRTTI units are greenfield and self-contained, so they compile while their neighbours do not. Never throw all of `Source/` at the compiler to prove a change.
 
 **Framework mode switch:** `Source/ModernSyntax.inc` lines 49–53 — default build is VCL-mode (`HAS_VCL` defined); FMX mode activated only by uncommenting `{.$DEFINE FMX}` (line 46). Neither symbol is unconditionally set; the library ships framework-agnostic at the unit level.
 
