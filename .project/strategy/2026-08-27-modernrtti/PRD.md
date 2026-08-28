@@ -64,7 +64,13 @@ Isto rebaixa o pilar de "reescrever a biblioteca" para "desenhar uma duzia de ti
 
 ## O que vamos construir
 
-Uma camada `ModernRTTI` com **tres pilares**, entregues nesta ordem de dependencia:
+**A `System.Rtti` do Delphi INTEIRA, espelhada com o prefixo `Modern`, disponivel igual nos dois compiladores.**
+
+Decisao do dono em 28/08: *"A camada e a System.Rtti inteira com Modern. ISSO"*. Cada tipo e implementado **com o recurso que cada linguagem oferece** — o Delphi usa a `System.Rtti` direto; o Lazarus tem quase tudo, so de forma mais verbosa, e **e essa verbosidade que a camada existe para absorver**. Enumerators incluidos, que o Delphi nem oferece.
+
+A superficie completa, tipo a tipo e membro a membro, com o caminho de implementacao **medido** no FPC 3.2.2, esta em **`API-MAP.md`**, ao lado deste documento. **13 dos 20 tipos existem no FPC; os 7 ausentes tem caminho, e nenhum e impossivel.**
+
+Os quatro primeiros blocos, ja entregues e no `main`, foram:
 
 **Pilar 1 — Leitura de RTTI.** `TModernRTTIType`, `TModernRTTIProperty`, `TModernRTTIField`, sobre `TRttiContext`. No Delphi e reexportacao quase 1:1; no FPC adapta `{$M+}` e `published`.
 
@@ -72,7 +78,9 @@ Uma camada `ModernRTTI` com **tres pilares**, entregues nesta ordem de dependenc
 
 **Pilar 3 — Invocacao.** `TModernInvoker`, unit nova.
 
-**Transversal — Callbacks.** `IMSFunc`/`IMSProc`/`IMSPredicate` e `Callback.Of`, usados pelos tres pilares.
+**Transversal — Callbacks.** `IModernFunc`/`IModernProc`/`IModernPredicate` e `Callback.Of`, usados pelos tres pilares.
+
+**O resto da superficie esta aberto em issues** — ver o EPIC **#32**, que carrega o objetivo e lista as filhas. Daqui em diante o trabalho e conduzido **pelas issues**, nao por este documento: o PRD e o retrato da conversa que originou as issues, e nao deve ser a fonte operacional depois disso.
 
 ## Fora de escopo
 
@@ -102,9 +110,17 @@ Uma camada `ModernRTTI` com **tres pilares**, entregues nesta ordem de dependenc
 
 **R1 — A unit `Rtti` do FPC e marcada `experimental`.** O compilador emite `Warning: Unit "Rtti" is experimental` a cada build. Risco assumido: se o FPC 3.4 mexer na API, a camada absorve o choque. **Este e um argumento a favor da camada existir**, nao contra.
 
-**R2 — A fabrica nao compila Pascal.** O container tem apenas bun/python/git/gh. **Nao ha compilador Pascal no ambiente da fabrica.** As lentes de qualidade julgam por leitura; **quem compila e o orquestrador**, na maquina do autor, com o FPC 3.2.2 dela. Todo PR desta linha deve declarar isso: "compilado em FPC 3.2.2 x86_64 e i386; **nao compilado em Delphi**" — o Delphi permanece com o autor.
+**R2 — ~~A fabrica nao compila Pascal~~ — SUPERADO EM 28/08.** ⚠️ **A fabrica COMPILA.** O FPC **3.2.2** foi declarado no `Dockerfile` da imagem (aefos-studio#358, mergeado) e esta provado no runtime: compila, roda FPCUnit e **reprova quando o teste e mutado**, tudo como `appuser` dentro do container. A receita executavel esta em **`.project/SKILL.md`**.
+
+**Por que esta linha ficou aqui em vez de ser apagada:** a redacao anterior dizia que *"as lentes de qualidade julgam por leitura"*, e uma lente **citou este R2** para aprovar o PR #11 sem construir — *"Analise estatica (leitura; sem compilador na fabrica — R2 do PRD)"*. Aquele PR nao compilava e foi fechado sem merge. **Uma linha de risco virou licenca escrita para nao compilar**, e o registro disso vale mais que a linha limpa.
+
+**O que continua valendo:** o **Delphi** permanece com o autor — nem a fabrica nem o orquestrador tem `dcc32`. Todo PR desta linha declara o que foi e o que nao foi compilado; **silencio nao e afirmacao de sucesso**.
+
+⚠️ **Nao ha cross-compiler i386 no container** (`ppc386` retorna 127) nem `lazbuild` — medido pela propria fabrica. A validacao i386 e a de `.lpi` ficam com o orquestrador.
 
 **R3 — O ramo Lazarus do `.inc` esta morto.** `ModernSyntax.inc:256` escreve `{$IFDEF FCP}`; o simbolo do FPC e `FPC`. O bloco **nunca disparou**, e o comentario que documenta isso existe **apenas na branch `main`** — na `develop`, que e a base de trabalho, ele nao esta. **Se a nova unit usar `{$IFDEF FPC}` direto, contorna. Se fizer `{$I ModernSyntax.inc}` e depender do simbolo, herda o bug.**
+
+⚠️ **ATUALIZADO EM 28/08:** a base de trabalho **deixou de ser a `develop`**. Medido: ela esta **22.855 linhas atras** do `main` (584 so em `Source/`, 1.910 em `Test Delphi/`), e no repositorio original o `develop` esta 26 commits atras — os 8 PRs mergeados la foram todos para `main`. **O tronco e o `main`**, e e nele que o comentario do autor sobre o `FCP` existe, terminando com *"Fix it together with a real FPC target and a build that proves it"*.
 
 **R4 — `GetProperties` no FPC exige `{$M+}` e `published`.** Uma classe de consumidor sem isso devolve lista vazia **sem erro**. A camada precisa **detectar e reportar**, nunca devolver vazio silencioso.
 
