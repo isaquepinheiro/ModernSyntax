@@ -15,6 +15,7 @@ correspondente e o ciclo ativo.
 | 002 | [#8](https://github.com/isaquepinheiro/ModernSyntax/issues/8) | Implementar Pilar 1 — Leitura de RTTI (TModernRTTIType, TModernRTTIProperty, TModernRTTIField) | 📤 PR aberto — [#11](https://github.com/isaquepinheiro/ModernSyntax/pull/11) |
 | 003 | [#7](https://github.com/isaquepinheiro/ModernSyntax/issues/7) | Implementar callbacks transversais — IModernFunc, IModernProc, IModernPredicate + factory Callback.Of | 📤 PR aberto — [#12](https://github.com/isaquepinheiro/ModernSyntax/pull/12) |
 | 004 | [#9](https://github.com/isaquepinheiro/ModernSyntax/issues/9) | Implementar Pilar 2 — Atributos portáveis (ModernSyntax.Attributes.pas + cenários + cascas DUnitX e FPCUnit) | 📤 PR aberto — [#16](https://github.com/isaquepinheiro/ModernSyntax/pull/16) |
+| 005 | [#10](https://github.com/isaquepinheiro/ModernSyntax/issues/10) | Implementar Pilar 3 — TModernInvoker (ModernSyntax.Invoker.pas + cenários + cascas DUnitX e FPCUnit) | 📤 PR aberto — [#19](https://github.com/isaquepinheiro/ModernSyntax/pull/19) |
 | 004 | [#7](https://github.com/isaquepinheiro/ModernSyntax/issues/7) | Reimplementar callbacks transversais — nova iteração após plan-gate:on_reject (ciclo 003) | 📤 PR aberto — [#18](https://github.com/isaquepinheiro/ModernSyntax/pull/18) |
 
 ## Legenda
@@ -43,3 +44,9 @@ três interfaces genéricas e factory `Callback.Of`; unit de cenários em
 implementar `Source/ModernSyntax.Attributes.pas` com `TModernAttribute` e
 `ModernAttributes` (Register + GetAttributes + regra 2 do ADENDO), unit
 compartilhada de cenários e duas cascas finas (DUnitX + FPCUnit).
+
+**Ciclo 005** — MAESTRO MODE. A issue #10 é a demanda oficial deste ciclo
+(intake do maestro). Nenhuma issue ou Epic adicional criada. Demanda:
+implementar `Source/ModernSyntax.Invoker.pas` com `TModernInvoker` (record
+com dois overloads `Invoke<TSignature>` sobre `TObject.MethodAddress`),
+unit compartilhada de sete cenários e duas cascas finas (DUnitX + FPCUnit).
