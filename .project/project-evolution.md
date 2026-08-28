@@ -14,7 +14,7 @@ correspondente e o ciclo ativo.
 |-------|-------|---------|--------|
 | 002 | [#8](https://github.com/isaquepinheiro/ModernSyntax/issues/8) | Implementar Pilar 1 — Leitura de RTTI (TModernRTTIType, TModernRTTIProperty, TModernRTTIField) | 📤 PR aberto — [#11](https://github.com/isaquepinheiro/ModernSyntax/pull/11) |
 | 003 | [#7](https://github.com/isaquepinheiro/ModernSyntax/issues/7) | Implementar callbacks transversais — IModernFunc, IModernProc, IModernPredicate + factory Callback.Of | 📤 PR aberto — [#12](https://github.com/isaquepinheiro/ModernSyntax/pull/12) |
-| 004 | [#8](https://github.com/isaquepinheiro/ModernSyntax/issues/8) | Implementar Source/ModernSyntax.RTTI.pas + cenários compartilhados + cascas de teste (Pilar 1 da ModernRTTI) | 🔄 in-review |
+| 004 | [#8](https://github.com/isaquepinheiro/ModernSyntax/issues/8) | Implementar Source/ModernSyntax.RTTI.pas + cenários compartilhados + cascas de teste (Pilar 1 da ModernRTTI) | 📤 PR aberto — [#17](https://github.com/isaquepinheiro/ModernSyntax/pull/17) |
 
 ## Legenda
 
