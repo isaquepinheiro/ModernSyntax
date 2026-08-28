@@ -18,7 +18,7 @@ correspondente e o ciclo ativo.
 | 005 | [#10](https://github.com/isaquepinheiro/ModernSyntax/issues/10) | Implementar Pilar 3 — TModernInvoker (ModernSyntax.Invoker.pas + cenários + cascas DUnitX e FPCUnit) | 📤 PR aberto — [#19](https://github.com/isaquepinheiro/ModernSyntax/pull/19) |
 | 006 | [#8](https://github.com/isaquepinheiro/ModernSyntax/issues/8) | Pilar 1 ModernRTTI — Source/ModernSyntax.RTTI.pas + cascas de teste (re-entrada pós plan-gate:on_reject) | 📤 PR aberto — [#20](https://github.com/isaquepinheiro/ModernSyntax/pull/20) |
 | 004 | [#7](https://github.com/isaquepinheiro/ModernSyntax/issues/7) | Reimplementar callbacks transversais — nova iteração após plan-gate:on_reject (ciclo 003) | 📤 PR aberto — [#18](https://github.com/isaquepinheiro/ModernSyntax/pull/18) |
-| 007 | [#23](https://github.com/isaquepinheiro/ModernSyntax/issues/23) | chore: renomear variáveis locais addr→LAddress, m→LMethod nos dois overloads de Invoke<TSignature> em Source/ModernSyntax.Invoker.pas | 🔄 in-review |
+| 007 | [#23](https://github.com/isaquepinheiro/ModernSyntax/issues/23) | chore: renomear variáveis locais addr→LAddress, m→LMethod nos dois overloads de Invoke<TSignature> em Source/ModernSyntax.Invoker.pas | 📤 PR aberto — [#30](https://github.com/isaquepinheiro/ModernSyntax/pull/30) |
 
 ## Legenda
 
