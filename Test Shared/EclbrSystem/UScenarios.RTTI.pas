@@ -121,6 +121,28 @@ type
   end;
 {$M-}
 
+  // Fixtures da issue #26 (TModernValue.AsType<T>). Declaradas AQUI para
+  // que o cenario compartilhado e o teste local do FPC (que precisa do
+  // TypeInfo(TPonto)^.Name na mensagem de excecao) enxerguem o mesmo tipo.
+  // Toca #21 (heranca — nao aqui) e #38 (multiplicidade 2+ no mesmo nivel)
+  // de graca no enum TColor.
+  TPonto = record
+    X, Y: Integer;
+  end;
+
+  TColor = (clRed, clGreen, clBlue);
+
+  // Classe simples para o cenario _Object — nao precisa de {$M+}: o cenario
+  // roundtripa a referencia via TValue.From<TObject>, nao inspeciona
+  // propriedades.
+  TValueObj = class
+  private
+    FTag: Integer;
+  public
+    constructor Create(ATag: Integer);
+    property Tag: Integer read FTag;
+  end;
+
 procedure Scenario_GetProperties_ReturnsPublishedProps;
 procedure Scenario_GetValue_Integer_Roundtrip;
 procedure Scenario_GetValue_String_Roundtrip;
@@ -130,10 +152,22 @@ procedure Scenario_GetFields_EnumeratesInheritedPublishedClassFields;
 procedure Scenario_GetMethods_CountsPublishedInherited_Exact;
 procedure Scenario_GetMethod_ByName_FindsInherited;
 procedure Scenario_Method_Invoke_NoArgs;
+// Cenarios da issue #26 — TModernValue.AsType<T> nos 5 tipos do CA + record
+// e enum. Todos de TIPO EXATO (D-9 do ADR): o cenario Delphi-widening
+// (From<Integer>(42).AsType<Int64>) foi REMOVIDO pela decisao. CA-5
+// preservado (zero diretiva por compilador neste arquivo).
+procedure Scenario_ModernValue_AsType_String;
+procedure Scenario_ModernValue_AsType_Integer;
+procedure Scenario_ModernValue_AsType_Boolean;
+procedure Scenario_ModernValue_AsType_Double;
+procedure Scenario_ModernValue_AsType_Object;
+procedure Scenario_ModernValue_AsType_Record;
+procedure Scenario_ModernValue_AsType_Enum;
 
 implementation
 
 uses
+  Math,
   ModernSyntax.Invoker;
 
 var
@@ -154,6 +188,14 @@ end;
 procedure TMethodDerived.Gama;
 begin
   Inc(GMethodInvokeCounter);
+end;
+
+{ TValueObj }
+
+constructor TValueObj.Create(ATag: Integer);
+begin
+  inherited Create;
+  FTag := ATag;
 end;
 
 procedure Fail(const AMsg: string);
@@ -389,6 +431,94 @@ begin
   finally
     LObj.Free;
   end;
+end;
+
+// --- Issue #26 — TModernValue.AsType<T> --------------------------------------
+
+procedure Scenario_ModernValue_AsType_String;
+var
+  LResult: string;
+begin
+  LResult := TModernValue.From<string>('abc').AsType<string>;
+  if LResult <> 'abc' then
+    Fail(Format('AsType<string> devolveu "%s"; esperado "abc"', [LResult]));
+end;
+
+procedure Scenario_ModernValue_AsType_Integer;
+var
+  LResult: Integer;
+begin
+  LResult := TModernValue.From<Integer>(42).AsType<Integer>;
+  if LResult <> 42 then
+    Fail(Format('AsType<Integer> devolveu %d; esperado 42', [LResult]));
+end;
+
+procedure Scenario_ModernValue_AsType_Boolean;
+var
+  LResult: Boolean;
+begin
+  LResult := TModernValue.From<Boolean>(True).AsType<Boolean>;
+  if LResult <> True then
+    Fail(Format('AsType<Boolean> devolveu %s; esperado True', [BoolToStr(LResult, True)]));
+end;
+
+procedure Scenario_ModernValue_AsType_Double;
+var
+  LResult: Double;
+begin
+  LResult := TModernValue.From<Double>(3.14).AsType<Double>;
+  // SameValue com tolerancia epsilon (Math): TValue.From<Double>(3.14) no
+  // FPC 3.2.2 armazena o literal como Extended; a extracao para Double
+  // devolve o Double mais proximo (3.1400000000000001), que difere do
+  // literal 3.14 quando comparado bit-a-bit. SameValue com o epsilon
+  // padrao do tipo Double resolve — o roundtrip semantico e o que importa.
+  if not SameValue(LResult, 3.14) then
+    Fail(Format('AsType<Double> devolveu %g; esperado ~3.14', [LResult]));
+end;
+
+procedure Scenario_ModernValue_AsType_Object;
+var
+  LObj: TValueObj;
+  LResult: TValueObj;
+  LOpaque: TObject;
+begin
+  LObj := TValueObj.Create(7);
+  try
+    // Ida-e-volta por TObject (tipo declarado como TValue "sabe"). Nos dois
+    // compiladores, IsType(TypeInfo(TObject)) e verdadeiro sobre From<TObject>.
+    LOpaque := TModernValue.From<TObject>(LObj).AsType<TObject>;
+    LResult := TValueObj(LOpaque);
+    if LResult <> LObj then
+      Fail('AsType<TObject> nao devolveu a mesma referencia');
+    if LResult.Tag <> 7 then
+      Fail(Format('AsType<TObject> preservou referencia mas Tag=%d; esperado 7', [LResult.Tag]));
+  finally
+    LObj.Free;
+  end;
+end;
+
+procedure Scenario_ModernValue_AsType_Record;
+var
+  LIn, LOut: TPonto;
+begin
+  LIn.X := 10;
+  LIn.Y := 20;
+  LOut := TModernValue.From<TPonto>(LIn).AsType<TPonto>;
+  if (LOut.X <> 10) or (LOut.Y <> 20) then
+    Fail(Format('AsType<TPonto> devolveu (%d,%d); esperado (10,20)', [LOut.X, LOut.Y]));
+end;
+
+procedure Scenario_ModernValue_AsType_Enum;
+var
+  LResult: TColor;
+begin
+  // Multiplicidade 2+ no mesmo nivel (toca #38): TColor tem tres valores;
+  // roundtripamos clGreen (nem o primeiro nem o ultimo) — mutacao que
+  // devolva sempre clRed ou lixo falha na igualdade.
+  LResult := TModernValue.From<TColor>(clGreen).AsType<TColor>;
+  if LResult <> clGreen then
+    Fail(Format('AsType<TColor> devolveu ordinal %d; esperado %d (clGreen)',
+      [Ord(LResult), Ord(clGreen)]));
 end;
 
 end.

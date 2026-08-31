@@ -73,6 +73,26 @@ type
     procedure TestGetMethod_ByName_FindsInherited;
     [Test]
     procedure TestMethod_Invoke_NoArgs;
+
+    // issue #26 — TModernValue.AsType<T>. Sete cenarios compartilhados, um
+    // por tipo (5 do CA + record + enum). NAO ha equivalente ao teste FPC
+    // TestModernValue_AsType_DifferentType_...: no Delphi, tipo diferente
+    // pode passar por alargamento nativo do TValue, e testar
+    // "levanta OU converte" nao vale nada (D-9 do ADR).
+    [Test]
+    procedure TestModernValue_AsType_String;
+    [Test]
+    procedure TestModernValue_AsType_Integer;
+    [Test]
+    procedure TestModernValue_AsType_Boolean;
+    [Test]
+    procedure TestModernValue_AsType_Double;
+    [Test]
+    procedure TestModernValue_AsType_Object;
+    [Test]
+    procedure TestModernValue_AsType_Record;
+    [Test]
+    procedure TestModernValue_AsType_Enum;
   end;
 
 implementation
@@ -135,6 +155,43 @@ end;
 procedure TTestModernRTTI.TestMethod_Invoke_NoArgs;
 begin
   Scenario_Method_Invoke_NoArgs;
+end;
+
+// --- Issue #26 ---------------------------------------------------------------
+
+procedure TTestModernRTTI.TestModernValue_AsType_String;
+begin
+  Scenario_ModernValue_AsType_String;
+end;
+
+procedure TTestModernRTTI.TestModernValue_AsType_Integer;
+begin
+  Scenario_ModernValue_AsType_Integer;
+end;
+
+procedure TTestModernRTTI.TestModernValue_AsType_Boolean;
+begin
+  Scenario_ModernValue_AsType_Boolean;
+end;
+
+procedure TTestModernRTTI.TestModernValue_AsType_Double;
+begin
+  Scenario_ModernValue_AsType_Double;
+end;
+
+procedure TTestModernRTTI.TestModernValue_AsType_Object;
+begin
+  Scenario_ModernValue_AsType_Object;
+end;
+
+procedure TTestModernRTTI.TestModernValue_AsType_Record;
+begin
+  Scenario_ModernValue_AsType_Record;
+end;
+
+procedure TTestModernRTTI.TestModernValue_AsType_Enum;
+begin
+  Scenario_ModernValue_AsType_Enum;
 end;
 
 initialization

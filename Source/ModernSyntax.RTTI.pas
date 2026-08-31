@@ -306,6 +306,46 @@ type
     function GetMethod(const AName: string): TModernRTTIMethod;
   end;
 
+  /// <summary>
+  ///   Envolve TValue nos dois compiladores e entrega AsType&lt;T&gt; — o
+  ///   unico membro do TValue medido AUSENTE no FPC 3.2.2 (issue #26).
+  ///   Superficie MINIMA: From&lt;T&gt;, FromValue, AsType&lt;T&gt;. Os
+  ///   demais membros do TValue (IsEmpty, TypeInfo, Kind, ToString, AsObject,
+  ///   AsString, AsInteger, IsObject, From&lt;T&gt;) foram medidos OK no FPC
+  ///   e o consumidor os usa direto no TValue nativo.
+  /// </summary>
+  /// <remarks>
+  ///   Arquitetura §7 do API-MAP / D-2 do ADR issue #26: o corpo de
+  ///   AsType&lt;T&gt; e uma linha, `Result := TValueOps.AsType&lt;T&gt;(FValue)`,
+  ///   sem qualquer {$IFDEF} — TValueOps existe em cada backend (mesma
+  ///   assinatura, homonimo), e o unico {$IFDEF} da unit publica seleciona
+  ///   o backend na clausula uses.
+  /// </remarks>
+  TModernValue = record
+  strict private
+    FValue: TValue;
+  public
+    /// <summary>Constroi um TModernValue tipado a partir de um valor de T.</summary>
+    class function From<T>(const AValue: T): TModernValue; static;
+    /// <summary>Constroi um TModernValue a partir de um TValue ja existente.</summary>
+    class function FromValue(const AValue: TValue): TModernValue; static;
+    /// <summary>
+    ///   Converte o valor envolvido para T.
+    /// </summary>
+    /// <remarks>
+    ///   No Delphi, AsType&lt;T&gt; herda a semantica de conversao do TValue
+    ///   nativo, incluindo alargamento de ordinais. No FPC 3.2.2, exige tipo
+    ///   exato. Conversao entre tipos diferentes nao e garantida nos dois
+    ///   compiladores; use o tipo exato para codigo portavel.
+    ///
+    ///   D-6 do ADR issue #26: divergencia declarada em voz alta (tom da
+    ///   issue #21). Alargamento portavel entre os dois compiladores fica
+    ///   como issue propria — pre-requisito e uma matriz Kind x Kind medida
+    ///   contra o dcc32.
+    /// </remarks>
+    function AsType<T>: T;
+  end;
+
   /// <summary>Entry point para leitura de RTTI portavel.</summary>
   /// <remarks>
   ///   Ownership: os handles devolvidos por GetType (e por chamadas em
@@ -355,6 +395,26 @@ resourcestring
   SModernRTTIGetMethodNotClass =
     'GetMethod so opera sobre tipo classe; %s nao e TRttiInstanceType.';
 
+{ TModernValue }
+
+class function TModernValue.From<T>(const AValue: T): TModernValue;
+begin
+  Result.FValue := TValue.From<T>(AValue);
+end;
+
+class function TModernValue.FromValue(const AValue: TValue): TModernValue;
+begin
+  Result.FValue := AValue;
+end;
+
+function TModernValue.AsType<T>: T;
+begin
+  // D-2 do ADR issue #26: uma linha, zero {$IFDEF}. O dispatch entre
+  // backends e feito pelo {$IFDEF FPC} da uses da implementation acima —
+  // TValueOps e homonimo em cada backend.
+  Result := TValueOps.AsType<T>(FValue);
+end;
+
 { TModernRTTIProperty }
 
 class function TModernRTTIProperty.FromRtti(const AProp: TRttiProperty): TModernRTTIProperty;
@@ -378,23 +438,18 @@ begin
 end;
 
 function TModernRTTIProperty.GetValue<T>(const AInstance: TObject): T;
-var
-  LValue: TValue;
 begin
-  LValue := FProp.GetValue(AInstance);
-{$IFDEF FPC}
-  // FPC 3.2.2 TValue nao tem AsType<T> generico. Extract raw data com
-  // refcount handling correto para tipos gerenciados. Se o tamanho nao
-  // bater, o consumidor deve cair para o overload TValue.
-  if LValue.DataSize <> SizeOf(T) then
-    raise EModernRTTIError.CreateFmt(
-      'GetValue<T>: tamanho incompativel na propriedade %s ' +
-      '(TValue=%d bytes, T=%d bytes). Use o overload TValue para leitura crua.',
-      [FProp.Name, LValue.DataSize, SizeOf(T)]);
-  LValue.ExtractRawData(@Result);
-{$ELSE}
-  Result := LValue.AsType<T>;
-{$ENDIF}
+  // D-7 do ADR issue #26: fecha o unico drift do §7 do API-MAP na unit
+  // publica. O bloco {$IFDEF FPC}...{$ELSE}...{$ENDIF} anterior desapareceu
+  // — a divergencia real (tipo exato no FPC, alargamento nativo no Delphi)
+  // vive dentro do TValueOps de cada backend. TModernRTTIField.GetValue<T>
+  // NAO e tocado (fora de escopo — usa mecanismo diferente, sem TValue no
+  // Delphi via FieldReadRaw). Consequencia media no FPC: se o tipo diferir,
+  // a mensagem passa a ser "incompativel: origem=... destino=..." em vez
+  // de "tamanho incompativel" — todos os tres roundtrips existentes
+  // (Integer/String/Currency) leem no mesmo tipo que escrevem e continuam
+  // verdes.
+  Result := TModernValue.FromValue(FProp.GetValue(AInstance)).AsType<T>;
 end;
 
 procedure TModernRTTIProperty.SetValue<T>(const AInstance: TObject; const AValue: T);

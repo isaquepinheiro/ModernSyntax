@@ -20,6 +20,7 @@ correspondente e o ciclo ativo.
 | 004 | [#7](https://github.com/isaquepinheiro/ModernSyntax/issues/7) | Reimplementar callbacks transversais — nova iteração após plan-gate:on_reject (ciclo 003) | 📤 PR aberto — [#18](https://github.com/isaquepinheiro/ModernSyntax/pull/18) |
 | 008 | [#21](https://github.com/isaquepinheiro/ModernSyntax/issues/21) | TModernRTTIField portável nos dois compiladores — mesmo tipo, dois mecanismos por dentro (FPC via vmtFieldTable, Delphi via TRttiField) | 📤 PR aberto — [#34](https://github.com/isaquepinheiro/ModernSyntax/pull/34) |
 | 010 | [#25](https://github.com/isaquepinheiro/ModernSyntax/issues/25) | TModernRTTIMethod pela vmtMethodTable — enumerar published, split de backends RTTI, migrar TModernRTTIField, fechar #35 | 📤 PR aberto — [#37](https://github.com/isaquepinheiro/ModernSyntax/pull/37) |
+| 011 | [#26](https://github.com/isaquepinheiro/ModernSyntax/issues/26) | TModernValue.AsType<T> portavel — TValueOps nos backends Delphi+FPC, reescrever GetValue<T>, 7 cenarios compartilhados + 1 published local FPC | 📤 PR aberto — [#39](https://github.com/isaquepinheiro/ModernSyntax/pull/39) |
 
 ## Legenda
 
@@ -80,3 +81,13 @@ criada. Demanda: adicionar `TModernRTTIMethod`/`TModernRTTIParameter` com
 `TModernRTTIField` para campos neutros + `FromToken`; fechar #35 com
 declaração de `ETestScenarioFailed` em `UScenarios.RTTI.pas`; três cenários
 compartilhados; cascas de teste FPC e Delphi. Build FPC x86_64 e i386 obrigatório.
+
+**Ciclo 011** — MAESTRO MODE. A issue #26 é a demanda oficial deste ciclo
+(intake do maestro: `aefos:running`). Nenhuma issue ou Epic adicional criada.
+Demanda: implementar `TModernValue` (record portável com `From<T>`, `FromValue`,
+`AsType<T>`) e `TValueOps` em cada backend — Delphi delega a `TValue.AsType<T>`;
+FPC converte via `IsType(TypeInfo(T))` + `ExtractRawData` + raise com mensagem
+acionável (origem + destino). Reescrever `TModernRTTIProperty.GetValue<T>` em
+uma linha via `TModernValue`; remover `{$IFDEF FPC}` das linhas 385–397.
+Sete cenários compartilhados + 1 published local FPC para caso de exceção.
+Build FPC x86_64 e i386 obrigatório; autor confirma Delphi 12.

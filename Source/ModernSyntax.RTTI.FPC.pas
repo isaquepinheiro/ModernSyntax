@@ -45,6 +45,34 @@ uses
   Rtti,
   ModernSyntax.RTTI;
 
+type
+  /// <summary>
+  ///   Backend-local operations record — D-2 do ADR issue #26. Homonimo com
+  ///   ModernSyntax.RTTI.Delphi.TValueOps por construcao: a exclusividade e
+  ///   garantida pelo unico {$IFDEF FPC} da uses de ModernSyntax.RTTI. Nao
+  ///   introduzir uma terceira unit que faca uses das duas (D-10).
+  /// </summary>
+  TValueOps = record
+    /// <summary>
+    ///   Interno — nao faz parte da API publica de ModernSyntax.RTTI. Sobe
+    ///   ao interface para desarmar o defeito medido do FPC 3.2.2
+    ///   "Global Generic template references static symtable": uma funcao
+    ///   generica declarada em record no interface nao pode referenciar
+    ///   simbolos que morem no static symtable da implementation (SKILL.md
+    ///   trap #2). Como a assinatura desta procedure vive no interface, a
+    ///   funcao generica pode chama-la sem violar a regra, e o corpo (na
+    ///   implementation) resolve resourcestring/EModernRTTIError livremente.
+    /// </summary>
+    class procedure RaiseIncompatible(AOrigin, ADestination: PTypeInfo); static;
+    /// <summary>
+    ///   FPC: exige tipo EXATO. Verifica via V.IsType(TypeInfo(T)) (D-4 do
+    ///   ADR — a forma generica IsType&lt;T&gt; nao compila dentro de funcao
+    ///   generica no FPC 3.2.2) e extrai por ExtractRawData; conversao entre
+    ///   tipos diferentes levanta EModernRTTIError nomeando origem e destino.
+    /// </summary>
+    class function AsType<T>(const AValue: TValue): T; static;
+  end;
+
 // --- Fields ------------------------------------------------------------------
 
 function FieldEnumerate(AClass: TClass): TArray<TModernRTTIField>;
@@ -112,6 +140,37 @@ resourcestring
     'TModernRTTIParameter.ParamType: nao disponivel no FPC pelo mesmo ' +
     'motivo de Name — a lista de parametros vive em TIntfMethodEntry, ' +
     'que nao alimenta metodos de classe.';
+  // Issue #26 — D-4 do ADR. UMA unica resourcestring nomeando origem e
+  // destino. Origem sai de V.TypeInfo^.Name; destino sai de
+  // PTypeInfo(TypeInfo(T))^.Name. Sem alargamento (D-5): tipos diferentes
+  // levantam com esta mensagem.
+  SModernValueIncompatibleType =
+    'incompativel: origem=%s destino=%s';
+
+// --- TValueOps ---------------------------------------------------------------
+
+class procedure TValueOps.RaiseIncompatible(AOrigin, ADestination: PTypeInfo);
+begin
+  // Metodo NAO-generico do proprio record, declarado no interface (ver
+  // XMLDoc). Corpo pode tocar resourcestring/EModernRTTIError da
+  // implementation livremente — o defeito "Global Generic template
+  // references static symtable" so atinge codigo generico.
+  raise EModernRTTIError.CreateFmt(SModernValueIncompatibleType,
+    [string(AOrigin^.Name), string(ADestination^.Name)]);
+end;
+
+class function TValueOps.AsType<T>(const AValue: TValue): T;
+begin
+  // D-4 do ADR issue #26. IsType(TypeInfo(T)) — nao IsType<T> — pela nota
+  // do proprio ADR: a forma generica nao compila dentro de funcao generica
+  // no FPC 3.2.2 e depende do {$ifndef NoGenericMethods} da RTL. A forma
+  // nao-generica e imune aos dois problemas.
+  // ExtractRawData cobre 10/10 dos casos exatos (medido nos dois bitness,
+  // record e enum inclusos) — dispensa dispatch por Kind.
+  if not AValue.IsType(TypeInfo(T)) then
+    TValueOps.RaiseIncompatible(AValue.TypeInfo, TypeInfo(T));
+  AValue.ExtractRawData(@Result);
+end;
 
 // --- Fields ------------------------------------------------------------------
 
