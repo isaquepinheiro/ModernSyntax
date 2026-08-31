@@ -21,7 +21,7 @@ correspondente e o ciclo ativo.
 | 008 | [#21](https://github.com/isaquepinheiro/ModernSyntax/issues/21) | TModernRTTIField portável nos dois compiladores — mesmo tipo, dois mecanismos por dentro (FPC via vmtFieldTable, Delphi via TRttiField) | 📤 PR aberto — [#34](https://github.com/isaquepinheiro/ModernSyntax/pull/34) |
 | 010 | [#25](https://github.com/isaquepinheiro/ModernSyntax/issues/25) | TModernRTTIMethod pela vmtMethodTable — enumerar published, split de backends RTTI, migrar TModernRTTIField, fechar #35 | 📤 PR aberto — [#37](https://github.com/isaquepinheiro/ModernSyntax/pull/37) |
 | 011 | [#26](https://github.com/isaquepinheiro/ModernSyntax/issues/26) | TModernValue.AsType<T> portavel — TValueOps nos backends Delphi+FPC, reescrever GetValue<T>, 7 cenarios compartilhados + 1 published local FPC | 📤 PR aberto — [#39](https://github.com/isaquepinheiro/ModernSyntax/pull/39) |
-| 012 | [#27](https://github.com/isaquepinheiro/ModernSyntax/issues/27) | Enumerators nas colecoes: for..in sobre Fields, Properties, Methods, Parameters, Attributes — property alias sobre TArray<T> nos dois compiladores | 🔄 in-review |
+| 012 | [#27](https://github.com/isaquepinheiro/ModernSyntax/issues/27) | Enumerators nas colecoes: for..in sobre Fields, Properties, Methods, Parameters, Attributes — property alias sobre TArray<T> nos dois compiladores | 📤 PR aberto — [#40](https://github.com/isaquepinheiro/ModernSyntax/pull/40) |
 
 ## Legenda
 
