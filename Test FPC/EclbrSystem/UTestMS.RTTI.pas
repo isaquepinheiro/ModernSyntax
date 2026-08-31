@@ -13,7 +13,6 @@
 
   Cada procedure published chama exatamente uma linha util (o cenario
   compartilhado). Se aparecer if/then de asserção nesta casca, e vazamento.
-  Sem TestGetFields aqui: TModernRTTIField e Delphi-only (D12 do ADR).
   Zero diretiva por compilador neste arquivo (CA-5 do PRD / ESP).
   ------------------------------------------------------------------------------
 *)
@@ -35,6 +34,7 @@ type
     procedure TestGetValue_String_Roundtrip;
     procedure TestGetValue_Currency_Roundtrip;
     procedure TestMissingM_RaisesEModernRTTIError;
+    procedure TestGetFields_EnumeratesInheritedPublishedClassFields;
   end;
 
 implementation
@@ -62,6 +62,11 @@ end;
 procedure TTestModernRTTI.TestMissingM_RaisesEModernRTTIError;
 begin
   Scenario_MissingM_RaisesEModernRTTIError;
+end;
+
+procedure TTestModernRTTI.TestGetFields_EnumeratesInheritedPublishedClassFields;
+begin
+  Scenario_GetFields_EnumeratesInheritedPublishedClassFields;
 end;
 
 initialization

@@ -147,3 +147,23 @@ qualquer ciclo que toque `Source/*.pas` ou `Test FPC/`.
 - **Zero cobertura Delphi na fabrica.** Compilacao Delphi
   (`dcc32`/`bcc32`) permanece com o autor humano. `.dproj` e escrito no
   padrao dos `PTest*.dpr` existentes.
+
+---
+
+## Include-path flag for PTestAttributes (agent-discovered 2026-08-31)
+
+Discovered in cycle 008 (issue #21 verify node). `PTestAttributes.lpr` uses
+`UTestMS.Attributes.Symbols.inc` which lives in `Test Shared/EclbrSystem/`.
+Without `-Fi`, FPC cannot find the include file and aborts with
+`Fatal: Cannot open include file`. Add `-Fi"Test Shared/EclbrSystem"` to the
+compile command:
+
+```
+rm -rf /tmp/fpcbuild
+mkdir -p /tmp/fpcbuild
+fpc -Mdelphi \
+    -Fu"Source" -Fu"Test Shared/EclbrSystem" -Fu"Test FPC/EclbrSystem" \
+    -Fi"Test Shared/EclbrSystem" \
+    -FU/tmp/fpcbuild -FE/tmp/fpcbuild \
+    "Test FPC/EclbrSystem/PTestAttributes.lpr"
+```

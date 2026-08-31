@@ -47,17 +47,33 @@ type
   /// </summary>
   EModernRTTIError = class(Exception);
 
-{$IFNDEF FPC}
   /// <summary>Handle leve para um campo (field) de instancia via RTTI.</summary>
   /// <remarks>
-  ///   Superficie Delphi-only: TRttiField e TRttiType.GetFields nao existem
-  ///   no FPC 3.2.2. Ausente por compilacao no FPC, nao por comportamento
-  ///   silencioso em runtime. Consumidor FPC que tentar usar recebe erro
-  ///   de compilacao explicito.
+  ///   Superficie unica nos dois compiladores; a mecanica interna difere.
+  ///   No Delphi, envolve TRttiField (visibilidade RTTI conforme atributos
+  ///   do compilador). No FPC, o campo e lido/escrito por offset absoluto
+  ///   sobre a instancia, e a enumeracao via GetFields cobre apenas campos
+  ///   published de tipo classe — limite do que a RTTI published do FPC
+  ///   reconhece como enumeravel.
   /// </remarks>
   TModernRTTIField = record
   strict private
+    {$IFDEF FPC}
+    FOwner: TClass;
+    FName: string;
+    FOffset: PtrUInt;
+    {$ELSE}
     FField: TRttiField;
+    {$ENDIF}
+  private
+    // Factories internas — nomes distintos por branch de proposito (D3 do
+    // ADR issue #21): assinaturas diferentes sob {$IFDEF} com nome unico
+    // levariam a chamada errada descoberta so pelo compilador.
+    {$IFDEF FPC}
+    class function FromRaw(AOwner: TClass; const AName: string; AOffset: PtrUInt): TModernRTTIField; static;
+    {$ELSE}
+    class function FromRtti(const AField: TRttiField): TModernRTTIField; static;
+    {$ENDIF}
   public
     /// <summary>Nome do campo.</summary>
     function Name: string;
@@ -75,7 +91,6 @@ type
     /// <summary>Overload cru sobre TValue (escape hatch — ver remarks do overload GetValue).</summary>
     procedure SetValue(const AInstance: TObject; const AValue: TValue); overload;
   end;
-{$ENDIF}
 
   /// <summary>Handle leve para uma propriedade RTTI publicada.</summary>
   TModernRTTIProperty = record
@@ -116,15 +131,17 @@ type
     ///   Devolve as propriedades publicadas do tipo.
     /// </summary>
     /// <remarks>
-    ///   Ownership: TModernRTTIType, TModernRTTIProperty (e TModernRTTIField
-    ///   no Delphi) sao handles leves que apontam para dados de TRttiContext
-    ///   mantido em class var TModernRTTI.FContext. O contexto e criado em
-    ///   initialization e liberado em finalization de ModernSyntax.RTTI. O
-    ///   consumidor NAO deve reter essas referencias apos shutdown do
-    ///   binario (comportamento de fim de processo e undefined). Dentro da
-    ///   vida da aplicacao, o array retornado por GetProperties (e GetFields
-    ///   no Delphi) e seguro para uso, iteracao e armazenamento — nenhum
-    ///   Free do consumidor e necessario nem permitido.
+    ///   Ownership: TModernRTTIType e TModernRTTIProperty sao handles leves
+    ///   que apontam para dados de TRttiContext mantido em class var
+    ///   TModernRTTI.FContext. O contexto e criado em initialization e
+    ///   liberado em finalization de ModernSyntax.RTTI. O consumidor NAO
+    ///   deve reter essas referencias apos shutdown do binario
+    ///   (comportamento de fim de processo e undefined). Dentro da vida da
+    ///   aplicacao, o array retornado por GetProperties e GetFields e
+    ///   seguro para uso, iteracao e armazenamento — nenhum Free do
+    ///   consumidor e necessario nem permitido. No FPC, TModernRTTIField
+    ///   nao guarda referencia ao contexto (usa apenas offset + TClass
+    ///   declarante), portanto e valido enquanto a classe existir.
     ///
     ///   Se a classe nao expuser propriedades a RTTI (no Delphi: ausencia
     ///   real de propriedades public/published; no FPC: falta de M+ antes
@@ -132,15 +149,20 @@ type
     ///   mensagem instrutiva. Nunca devolve lista vazia silenciosa.
     /// </remarks>
     function GetProperties: TArray<TModernRTTIProperty>;
-{$IFNDEF FPC}
-    /// <summary>Devolve os campos de instancia do tipo.</summary>
+    /// <summary>Devolve os campos de instancia do tipo, incluindo herdados.</summary>
     /// <remarks>
-    ///   Delphi-only: TRttiType.GetFields e TRttiField nao existem no FPC
-    ///   3.2.2. Ausente por compilacao no FPC. Mesmo contrato de ownership
-    ///   do GetProperties (ver remarks acima).
+    ///   Enumera os campos que a RTTI de cada compilador reconhece como
+    ///   enumeraveis. No Delphi, corresponde ao que TRttiType.GetFields
+    ///   devolve — todos os campos alcancaveis por RTTI, herdados incluidos.
+    ///   No FPC, corresponde aos campos published de tipo classe, subindo
+    ///   a cadeia por ClassParent (elos sem vmtFieldTable sao pulados, nao
+    ///   erram; cadeia inteira sem campos devolve array vazio).
+    ///
+    ///   A ordem dos elementos NAO e especificada — consumidores devem
+    ///   buscar por nome, nao indexar por posicao. Mesmo contrato de
+    ///   ownership do GetProperties (ver remarks acima).
     /// </remarks>
     function GetFields: TArray<TModernRTTIField>;
-{$ENDIF}
     class function FromRtti(const AType: TRttiType): TModernRTTIType; static;
   end;
 
@@ -231,37 +253,78 @@ begin
   FProp.SetValue(AInstance, AValue);
 end;
 
-{$IFNDEF FPC}
 { TModernRTTIField }
+
+{$IFDEF FPC}
+class function TModernRTTIField.FromRaw(AOwner: TClass; const AName: string;
+  AOffset: PtrUInt): TModernRTTIField;
+begin
+  Result.FOwner := AOwner;
+  Result.FName := AName;
+  Result.FOffset := AOffset;
+end;
+{$ELSE}
+class function TModernRTTIField.FromRtti(const AField: TRttiField): TModernRTTIField;
+begin
+  Result.FField := AField;
+end;
+{$ENDIF}
 
 function TModernRTTIField.Name: string;
 begin
+  {$IFDEF FPC}
+  Result := FName;
+  {$ELSE}
   Result := FField.Name;
+  {$ENDIF}
 end;
 
 function TModernRTTIField.GetValue<T>(const AInstance: TObject): T;
+{$IFNDEF FPC}
 var
   LValue: TValue;
+{$ENDIF}
 begin
+  {$IFDEF FPC}
+  // Leitura crua por offset absoluto. O escopo da RTTI published do FPC e
+  // apenas tipo classe (limite do compilador), entao T aqui e tipicamente
+  // TObject/TInner; o Move de SizeOf(T) copia o ponteiro. Se o consumidor
+  // usar T com tipo composto/gerenciado, o overload TValue e o caminho.
+  Move((PByte(AInstance) + FOffset)^, Result, SizeOf(T));
+  {$ELSE}
   LValue := FField.GetValue(AInstance);
   Result := LValue.AsType<T>;
+  {$ENDIF}
 end;
 
 procedure TModernRTTIField.SetValue<T>(const AInstance: TObject; const AValue: T);
 begin
+  {$IFDEF FPC}
+  Move(AValue, (PByte(AInstance) + FOffset)^, SizeOf(T));
+  {$ELSE}
   FField.SetValue(AInstance, TValue.From<T>(AValue));
+  {$ENDIF}
 end;
 
 function TModernRTTIField.GetValue(const AInstance: TObject): TValue;
 begin
+  {$IFDEF FPC}
+  // Overload TValue no FPC: sempre classe (limite published), envolve o
+  // ponteiro lido do campo em TValue via TValue.From<TObject> (D9 do ADR).
+  Result := TValue.From<TObject>(PPointer(PByte(AInstance) + FOffset)^);
+  {$ELSE}
   Result := FField.GetValue(AInstance);
+  {$ENDIF}
 end;
 
 procedure TModernRTTIField.SetValue(const AInstance: TObject; const AValue: TValue);
 begin
+  {$IFDEF FPC}
+  PPointer(PByte(AInstance) + FOffset)^ := Pointer(AValue.AsObject);
+  {$ELSE}
   FField.SetValue(AInstance, AValue);
+  {$ENDIF}
 end;
-{$ENDIF}
 
 { TModernRTTIType }
 
@@ -300,8 +363,61 @@ begin
     Result[LIdx] := TModernRTTIProperty.FromRtti(LProps[LIdx]);
 end;
 
-{$IFNDEF FPC}
 function TModernRTTIType.GetFields: TArray<TModernRTTIField>;
+{$IFDEF FPC}
+var
+  LClass, LCur: TClass;
+  LTab: PVmtFieldTable;
+  LEntry: PVmtFieldEntry;
+  LCount, LIdx, LI: Integer;
+begin
+  // Enumeracao portavel no FPC via vmtFieldTable tipada (D4 do ADR).
+  // vmtFieldTable NAO e recursiva (jitclass.pas:1187-1188), diferente do
+  // TRttiType.GetFields do Delphi que inclui herdados — por isso subimos
+  // a cadeia por ClassParent (D6 do ADR). Elo com vFieldTable = nil e
+  // rotina: pula, nao erra (D7 do ADR).
+  Result := nil;
+  if not (FType is TRttiInstanceType) then
+    Exit;
+  LClass := TRttiInstanceType(FType).MetaclassType;
+  if LClass = nil then
+    Exit;
+
+  // Duas passadas: conta para dimensionar o array, depois preenche. Evita
+  // realocacoes sucessivas e mantem o corpo do loop util livre de SetLength.
+  LCount := 0;
+  LCur := LClass;
+  while LCur <> nil do
+  begin
+    LTab := PVmtFieldTable(PVmt(Pointer(LCur))^.vFieldTable);
+    if LTab <> nil then
+      Inc(LCount, LTab^.Count);
+    LCur := LCur.ClassParent;
+  end;
+
+  SetLength(Result, LCount);
+  LIdx := 0;
+  LCur := LClass;
+  while LCur <> nil do
+  begin
+    LTab := PVmtFieldTable(PVmt(Pointer(LCur))^.vFieldTable);
+    if LTab <> nil then
+      for LI := 0 to LTab^.Count - 1 do
+      begin
+        // property Field[i] (D5): entradas TVmtFieldEntry tem tamanho
+        // variavel (Name: ShortString) — indexar Fields[i] como array le
+        // lixo a partir da segunda entrada.
+        LEntry := LTab^.Field[LI];
+        // AOwner guarda o elo declarante (RN-8/D6) — preserva debug.
+        // Cast string(...) (D8): TVmtFieldEntry.Name e ShortString.
+        Result[LIdx] := TModernRTTIField.FromRaw(
+          LCur, string(LEntry^.Name), LEntry^.FieldOffset);
+        Inc(LIdx);
+      end;
+    LCur := LCur.ClassParent;
+  end;
+end;
+{$ELSE}
 var
   LFields: TArray<TRttiField>;
   LIdx: Integer;
@@ -309,7 +425,7 @@ begin
   LFields := FType.GetFields;
   SetLength(Result, Length(LFields));
   for LIdx := 0 to High(LFields) do
-    Result[LIdx].FField := LFields[LIdx];
+    Result[LIdx] := TModernRTTIField.FromRtti(LFields[LIdx]);
 end;
 {$ENDIF}
 
