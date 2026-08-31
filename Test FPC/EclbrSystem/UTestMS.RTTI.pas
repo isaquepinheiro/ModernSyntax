@@ -53,6 +53,15 @@ type
     procedure TestModernValue_AsType_Record;
     procedure TestModernValue_AsType_Enum;
     procedure TestModernValue_AsType_DifferentType_RaisesWithOriginAndDestination;
+    // issue #27 — for..in sobre as coleções (cinco comuns + Parameters
+    // raises no FPC). O irmao que itera parametros reais nao e publicado
+    // aqui (padrao "dois cenarios distintos + duas cascas" da #25).
+    procedure TestFields_ForIn_IteratesFields;
+    procedure TestProperties_ForIn_IteratesProperties;
+    procedure TestMethods_ForIn_IteratesMethods;
+    procedure TestAttributes_ForIn_IteratesAttributes;
+    procedure TestEmptyCollection_ForIn_DoesNotLoop;
+    procedure TestParameters_ForIn_RaisesOnFPC;
   end;
 
 implementation
@@ -177,6 +186,38 @@ begin
   AssertTrue(
     Format('EModernRTTIError sem nome de destino "AnsiString" em: "%s"', [LMsg]),
     Pos('AnsiString', LMsg) > 0);
+end;
+
+// --- Issue #27 ---------------------------------------------------------------
+
+procedure TTestModernRTTI.TestFields_ForIn_IteratesFields;
+begin
+  Scenario_Fields_ForIn_IteratesFields;
+end;
+
+procedure TTestModernRTTI.TestProperties_ForIn_IteratesProperties;
+begin
+  Scenario_Properties_ForIn_IteratesProperties;
+end;
+
+procedure TTestModernRTTI.TestMethods_ForIn_IteratesMethods;
+begin
+  Scenario_Methods_ForIn_IteratesMethods;
+end;
+
+procedure TTestModernRTTI.TestAttributes_ForIn_IteratesAttributes;
+begin
+  Scenario_Attributes_ForIn_IteratesAttributes;
+end;
+
+procedure TTestModernRTTI.TestEmptyCollection_ForIn_DoesNotLoop;
+begin
+  Scenario_EmptyCollection_ForIn_DoesNotLoop;
+end;
+
+procedure TTestModernRTTI.TestParameters_ForIn_RaisesOnFPC;
+begin
+  Scenario_Parameters_ForIn_RaisesOnFPC;
 end;
 
 initialization

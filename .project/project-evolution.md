@@ -21,6 +21,7 @@ correspondente e o ciclo ativo.
 | 008 | [#21](https://github.com/isaquepinheiro/ModernSyntax/issues/21) | TModernRTTIField portável nos dois compiladores — mesmo tipo, dois mecanismos por dentro (FPC via vmtFieldTable, Delphi via TRttiField) | 📤 PR aberto — [#34](https://github.com/isaquepinheiro/ModernSyntax/pull/34) |
 | 010 | [#25](https://github.com/isaquepinheiro/ModernSyntax/issues/25) | TModernRTTIMethod pela vmtMethodTable — enumerar published, split de backends RTTI, migrar TModernRTTIField, fechar #35 | 📤 PR aberto — [#37](https://github.com/isaquepinheiro/ModernSyntax/pull/37) |
 | 011 | [#26](https://github.com/isaquepinheiro/ModernSyntax/issues/26) | TModernValue.AsType<T> portavel — TValueOps nos backends Delphi+FPC, reescrever GetValue<T>, 7 cenarios compartilhados + 1 published local FPC | 📤 PR aberto — [#39](https://github.com/isaquepinheiro/ModernSyntax/pull/39) |
+| 012 | [#27](https://github.com/isaquepinheiro/ModernSyntax/issues/27) | Enumerators nas colecoes: for..in sobre Fields, Properties, Methods, Parameters, Attributes — property alias sobre TArray<T> nos dois compiladores | 🔄 in-review |
 
 ## Legenda
 
@@ -81,6 +82,15 @@ criada. Demanda: adicionar `TModernRTTIMethod`/`TModernRTTIParameter` com
 `TModernRTTIField` para campos neutros + `FromToken`; fechar #35 com
 declaração de `ETestScenarioFailed` em `UScenarios.RTTI.pas`; três cenários
 compartilhados; cascas de teste FPC e Delphi. Build FPC x86_64 e i386 obrigatório.
+
+**Ciclo 012** — MAESTRO MODE. A issue #27 é a demanda oficial deste ciclo
+(intake do maestro: `aefos:investigated`). Nenhuma issue ou Epic adicional criada.
+Demanda: adicionar quatro properties alias ao `TModernRTTITypeHelper` (`Fields`,
+`Properties`, `Methods`, `Attributes`) e uma property alias ao `TModernRTTIMethod`
+(`Parameters`) em `Source/ModernSyntax.RTTI.pas`; método privado `GetAttributes`;
+importar `ModernSyntax.Attributes` na `uses` da `interface`; sete cenários compartilhados
+em `UScenarios.RTTI.pas`; seis published/[Test] em cada casca FPC e Delphi.
+Zero `{$IFDEF}` nos cenários (CA-5). Build FPC x86_64 e i386 obrigatório; autor confirma Delphi 12.
 
 **Ciclo 011** — MAESTRO MODE. A issue #26 é a demanda oficial deste ciclo
 (intake do maestro: `aefos:running`). Nenhuma issue ou Epic adicional criada.

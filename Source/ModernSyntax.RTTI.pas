@@ -42,7 +42,8 @@ interface
 uses
   SysUtils,
   TypInfo,
-  Rtti;
+  Rtti,
+  ModernSyntax.Attributes;
 
 type
   /// <summary>
@@ -268,6 +269,20 @@ type
     ///   vmtMethodTable so registra published.
     /// </summary>
     function Visibility: TMemberVisibility;
+    /// <summary>
+    ///   Parametros do metodo, expostos como coleção iteravel por `for..in`
+    ///   (issue #27). Alias puro de `GetParameters` — a coleção subjacente
+    ///   ja e `TArray<TModernRTTIParameter>` e `for..in` sobre `TArray<T>`
+    ///   compila e roda nos dois compiladores.
+    /// </summary>
+    /// <remarks>
+    ///   No FPC, acessar `Parameters` levanta `EModernRTTIError` — a
+    ///   assinatura de método de classe não existe no FPC 3.2.2 (D-26 do
+    ///   ADR ciclo 011; vmtMethodTable so carrega Name e CodeAddress). No
+    ///   Delphi, devolve os parametros reais via TRttiMethod.GetParameters.
+    ///   Mesma divergencia em voz alta que `GetParameters`.
+    /// </remarks>
+    property Parameters: TArray<TModernRTTIParameter> read GetParameters;
   end;
 
   /// <summary>
@@ -280,6 +295,22 @@ type
   ///   helper e detalhe da unit publica.
   /// </summary>
   TModernRTTITypeHelper = record helper for TModernRTTIType
+  strict private
+    /// <summary>
+    ///   Forwarders internos das properties `Fields`, `Properties` e
+    ///   `Attributes` (issue #27). Nao fazem parte da API publica — o
+    ///   consumidor chama `LType.Fields`, nao `LType.PropFields`.
+    ///
+    ///   Existem porque no FPC 3.2.2 uma `property` de record helper com
+    ///   `read <Nome>` nao resolve <Nome> contra metodos do tipo alvo
+    ///   (medido: "Unknown class field or method identifier GetFields"),
+    ///   diferente do Delphi. Cada forwarder chama o metodo do tipo alvo
+    ///   via `Self`, mantendo a delegacao pura e o corpo trivial.
+    /// </summary>
+    function PropFields: TArray<TModernRTTIField>;
+    function PropProperties: TArray<TModernRTTIProperty>;
+    function PropAttributes: TArray<TObject>;
+  public
     /// <summary>Devolve os metodos do tipo (issue #25).</summary>
     /// <remarks>
     ///   COBERTURA DIFERE ENTRE COMPILADORES (D-25.5 do ADR issue #25):
@@ -304,6 +335,28 @@ type
     ///   EModernRTTIError com mensagem que menciona a classe e o nome.
     /// </remarks>
     function GetMethod(const AName: string): TModernRTTIMethod;
+    /// <summary>
+    ///   Campos do tipo, expostos como coleção iteravel por `for..in`
+    ///   (issue #27). Alias puro de `GetFields`.
+    /// </summary>
+    property Fields: TArray<TModernRTTIField> read PropFields;
+    /// <summary>
+    ///   Propriedades do tipo, expostas como coleção iteravel por `for..in`
+    ///   (issue #27). Alias puro de `GetProperties`.
+    /// </summary>
+    property Properties: TArray<TModernRTTIProperty> read PropProperties;
+    /// <summary>
+    ///   Metodos do tipo, expostos como coleção iteravel por `for..in`
+    ///   (issue #27). Alias puro de `GetMethods`.
+    /// </summary>
+    property Methods: TArray<TModernRTTIMethod> read GetMethods;
+    /// <summary>
+    ///   Atributos por-tipo, expostos como coleção iteravel por `for..in`
+    ///   (issue #27). Alias puro de `ModernAttributes.GetAttributes` — vale
+    ///   nos dois compiladores (regra 2 do ADENDO do ciclo 004: no Delphi,
+    ///   funde nativos com registrados; no FPC, so registrados).
+    /// </summary>
+    property Attributes: TArray<TObject> read PropAttributes;
   end;
 
   /// <summary>
@@ -583,6 +636,31 @@ begin
     raise EModernRTTIError.CreateFmt(SModernRTTIGetMethodNotClass, [FType.Name]);
   if not MethodLookup(TRttiInstanceType(FType).MetaclassType, AName, Result) then
     raise EModernRTTIError.CreateFmt(SModernRTTIMethodNotFound, [AName, FType.Name]);
+end;
+
+function TModernRTTITypeHelper.PropFields: TArray<TModernRTTIField>;
+begin
+  // Forwarder trivial — a logica real (e o guard `is TRttiInstanceType`)
+  // vive em TModernRTTIType.GetFields. Ver comentario da declaracao dos
+  // forwarders (strict private) sobre o porque de nao usar `read GetFields`
+  // direto no FPC 3.2.2.
+  Result := Self.GetFields;
+end;
+
+function TModernRTTITypeHelper.PropProperties: TArray<TModernRTTIProperty>;
+begin
+  Result := Self.GetProperties;
+end;
+
+function TModernRTTITypeHelper.PropAttributes: TArray<TObject>;
+begin
+  // Issue #27: alias para a coleção ja existente do Pilar 2. Delega direto
+  // — a fusao nativa+registrada (Delphi) e a copia de `Owned` (FPC) vivem
+  // dentro de `ModernAttributes.GetAttributes`. Nenhum estado novo aqui.
+  if (FType is TRttiInstanceType) then
+    Result := ModernAttributes.GetAttributes(TRttiInstanceType(FType).MetaclassType)
+  else
+    Result := nil;
 end;
 
 { TModernRTTIParameter }

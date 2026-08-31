@@ -27,7 +27,8 @@ interface
 
 uses
   SysUtils,
-  ModernSyntax.RTTI;
+  ModernSyntax.RTTI,
+  ModernSyntax.Attributes;
 
 type
   /// <summary>
@@ -143,6 +144,40 @@ type
     property Tag: Integer read FTag;
   end;
 
+  // Fixtures da issue #27 (for..in sobre as colecoes).
+  //
+  // TAttrForIn e TAlvoForInAttrs suportam Scenario_Attributes_ForIn_...:
+  // o cenario registra UMA instancia de TAttrForIn contra TAlvoForInAttrs
+  // via ModernAttributes.Register, itera LType.Attributes e valida que a
+  // instancia registrada aparece na coleção.
+  TAttrForIn = class(TModernAttribute)
+  private
+    FTag: string;
+  public
+    constructor Create(const ATag: string);
+    property Tag: string read FTag;
+  end;
+
+  TAlvoForInAttrs = class(TObject);
+
+  // Classe SEM published (nem M+) para Scenario_EmptyCollection_ForIn_...:
+  // LType.Fields deve devolver coleção vazia — nem levantar, nem laço
+  // infinito. Precisa ser distinta de TNoRttiFixture (que carrega
+  // FSilent private) porque no Delphi TRttiType.GetFields tambem lista
+  // private fields e a contagem 0 exige classe sem NENHUM campo.
+  TEmptyForIn = class(TObject);
+
+  // Classe com metodo published que carrega parametros — usada por
+  // Scenario_Parameters_ForIn_IteratesRealParameters (Delphi-only na
+  // casca — no FPC o irmao Scenario_Parameters_ForIn_RaisesOnFPC ataca
+  // o mesmo metodo esperando EModernRTTIError).
+{$M+}
+  TMethodWithParams = class
+  published
+    procedure Beta(AArg: Integer; const AText: string);
+  end;
+{$M-}
+
 procedure Scenario_GetProperties_ReturnsPublishedProps;
 procedure Scenario_GetValue_Integer_Roundtrip;
 procedure Scenario_GetValue_String_Roundtrip;
@@ -163,6 +198,15 @@ procedure Scenario_ModernValue_AsType_Double;
 procedure Scenario_ModernValue_AsType_Object;
 procedure Scenario_ModernValue_AsType_Record;
 procedure Scenario_ModernValue_AsType_Enum;
+// Cenarios da issue #27 — for..in sobre as coleções. Cinco comuns aos dois
+// compiladores + par distinto para Parameters (RaisesOnFPC vs IteratesReal).
+procedure Scenario_Fields_ForIn_IteratesFields;
+procedure Scenario_Properties_ForIn_IteratesProperties;
+procedure Scenario_Methods_ForIn_IteratesMethods;
+procedure Scenario_Attributes_ForIn_IteratesAttributes;
+procedure Scenario_EmptyCollection_ForIn_DoesNotLoop;
+procedure Scenario_Parameters_ForIn_RaisesOnFPC;
+procedure Scenario_Parameters_ForIn_IteratesRealParameters;
 
 implementation
 
@@ -196,6 +240,22 @@ constructor TValueObj.Create(ATag: Integer);
 begin
   inherited Create;
   FTag := ATag;
+end;
+
+{ TAttrForIn }
+
+constructor TAttrForIn.Create(const ATag: string);
+begin
+  inherited Create;
+  FTag := ATag;
+end;
+
+{ TMethodWithParams }
+
+procedure TMethodWithParams.Beta(AArg: Integer; const AText: string);
+begin
+  // Corpo vazio — o cenario nao invoca Beta; apenas le seus parametros
+  // via LMethod.Parameters (no Delphi) ou verifica o raise (no FPC).
 end;
 
 procedure Fail(const AMsg: string);
@@ -519,6 +579,168 @@ begin
   if LResult <> clGreen then
     Fail(Format('AsType<TColor> devolveu ordinal %d; esperado %d (clGreen)',
       [Ord(LResult), Ord(clGreen)]));
+end;
+
+// --- Issue #27 — for..in sobre as coleções -----------------------------------
+
+procedure Scenario_Fields_ForIn_IteratesFields;
+var
+  LField: TModernRTTIField;
+  LCount: Integer;
+  LFoundA, LFoundB: Boolean;
+begin
+  // Fixture TPortableFieldFixture: InnerA herdado de TBase + InnerB proprio
+  // = 2 campos. `for..in` sobre LType.Fields deve iterar exatamente 2 vezes
+  // e visitar ambos.
+  LCount := 0;
+  LFoundA := False;
+  LFoundB := False;
+  for LField in TModernRTTI.GetType(TPortableFieldFixture).Fields do
+  begin
+    Inc(LCount);
+    if LField.Name = 'InnerA' then LFoundA := True;
+    if LField.Name = 'InnerB' then LFoundB := True;
+  end;
+  if LCount <> 2 then
+    Fail(Format('for..in Fields visitou %d campos; esperado exatamente 2', [LCount]));
+  if not LFoundA then
+    Fail('for..in Fields nao visitou InnerA (herdado de TBase)');
+  if not LFoundB then
+    Fail('for..in Fields nao visitou InnerB (declarado em TPortableFieldFixture)');
+end;
+
+procedure Scenario_Properties_ForIn_IteratesProperties;
+var
+  LProp: TModernRTTIProperty;
+  LCount: Integer;
+  LFoundNumber, LFoundName, LFoundAmount: Boolean;
+begin
+  // Fixture TPortableFixture: Number, Name, Amount = 3 propriedades published.
+  LCount := 0;
+  LFoundNumber := False;
+  LFoundName := False;
+  LFoundAmount := False;
+  for LProp in TModernRTTI.GetType(TPortableFixture).Properties do
+  begin
+    Inc(LCount);
+    if SameText(LProp.Name, 'Number') then LFoundNumber := True;
+    if SameText(LProp.Name, 'Name') then LFoundName := True;
+    if SameText(LProp.Name, 'Amount') then LFoundAmount := True;
+  end;
+  if LCount < 3 then
+    Fail(Format('for..in Properties visitou %d propriedades; esperado ao menos 3', [LCount]));
+  if not (LFoundNumber and LFoundName and LFoundAmount) then
+    Fail(Format('for..in Properties perdeu propriedade (Number=%d, Name=%d, Amount=%d)',
+      [Ord(LFoundNumber), Ord(LFoundName), Ord(LFoundAmount)]));
+end;
+
+procedure Scenario_Methods_ForIn_IteratesMethods;
+var
+  LMethod: TModernRTTIMethod;
+  LCount: Integer;
+  LFoundAlpha, LFoundGama: Boolean;
+begin
+  // Fixture TMethodDerived: Alpha (herdado de TMethodBase) + Gama (proprio)
+  // = 2 metodos published. Simetria com GetMethods_CountsPublishedInherited_Exact.
+  LCount := 0;
+  LFoundAlpha := False;
+  LFoundGama := False;
+  for LMethod in TModernRTTI.GetType(TMethodDerived).Methods do
+  begin
+    Inc(LCount);
+    if SameText(LMethod.Name, 'Alpha') then LFoundAlpha := True;
+    if SameText(LMethod.Name, 'Gama') then LFoundGama := True;
+  end;
+  if LCount <> 2 then
+    Fail(Format('for..in Methods visitou %d metodos; esperado exatamente 2 ' +
+      '(Alpha herdado + Gama proprio)', [LCount]));
+  if not LFoundAlpha then
+    Fail('for..in Methods nao visitou Alpha (herdado)');
+  if not LFoundGama then
+    Fail('for..in Methods nao visitou Gama (proprio)');
+end;
+
+procedure Scenario_Attributes_ForIn_IteratesAttributes;
+var
+  LAttr: TObject;
+  LCount, LTaggedCount: Integer;
+begin
+  // Registra UMA instancia de TAttrForIn('for-in') contra TAlvoForInAttrs.
+  // `for..in LType.Attributes` deve iterar ao menos uma vez e visitar essa
+  // instancia. Uso de `>= 1` em vez de igualdade absorve a possibilidade
+  // (medida na regra 2 do ADENDO do ciclo 004) de atributos nativos
+  // adicionais no Delphi — o cenario compartilhado nao pode assumir
+  // ausencia total no Delphi.
+  ModernAttributes.Register(TAlvoForInAttrs, [TAttrForIn.Create('for-in')]);
+
+  LCount := 0;
+  LTaggedCount := 0;
+  for LAttr in TModernRTTI.GetType(TAlvoForInAttrs).Attributes do
+  begin
+    Inc(LCount);
+    if (LAttr is TAttrForIn) and (TAttrForIn(LAttr).Tag = 'for-in') then
+      Inc(LTaggedCount);
+  end;
+  if LCount < 1 then
+    Fail(Format('for..in Attributes visitou %d atributos; esperado ao menos 1', [LCount]));
+  if LTaggedCount < 1 then
+    Fail('for..in Attributes nao visitou a instancia TAttrForIn("for-in") registrada');
+end;
+
+procedure Scenario_EmptyCollection_ForIn_DoesNotLoop;
+var
+  LField: TModernRTTIField;
+  LCount: Integer;
+begin
+  // Fixture TEmptyForIn: classe sem NENHUM campo. `for..in Fields` deve
+  // iterar 0 vezes — nem levantar, nem cair em laço infinito. Esta e a
+  // asserção do robusto sobre coleção vazia (CA explicito da issue #27).
+  LCount := 0;
+  for LField in TModernRTTI.GetType(TEmptyForIn).Fields do
+    Inc(LCount);
+  if LCount <> 0 then
+    Fail(Format('for..in Fields sobre classe vazia iterou %d vezes; esperado 0', [LCount]));
+end;
+
+procedure Scenario_Parameters_ForIn_RaisesOnFPC;
+var
+  LMethod: TModernRTTIMethod;
+  LRaised: Boolean;
+begin
+  // D-26 (ADR ciclo 011): no FPC, TModernRTTIMethod.GetParameters/Parameters
+  // levanta EModernRTTIError — vmtMethodTable nao lista parametros. Este
+  // cenario e publicado APENAS na casca FPC (padrao "dois cenarios distintos +
+  // duas cascas" da #25); a casca Delphi publica o irmao que itera.
+  //
+  // Padrao try/except + Fail(...) literal (UScenarios.RTTI.pas:315-323) —
+  // sem chamar helper de terceiros (simbolo equivalente inexistente no repo).
+  LMethod := TModernRTTI.GetType(TMethodWithParams).GetMethod('Beta');
+  LRaised := False;
+  try
+    LMethod.Parameters;
+  except
+    on E: EModernRTTIError do LRaised := True;
+  end;
+  if not LRaised then
+    Fail('esperava EModernRTTIError e nada foi levantado');
+end;
+
+procedure Scenario_Parameters_ForIn_IteratesRealParameters;
+var
+  LMethod: TModernRTTIMethod;
+  LParam: TModernRTTIParameter;
+  LCount: Integer;
+begin
+  // Publicado APENAS na casca Delphi (par distinto). Beta(AArg: Integer;
+  // const AText: string) tem exatamente 2 parametros; `for..in Parameters`
+  // deve visitar os dois.
+  LMethod := TModernRTTI.GetType(TMethodWithParams).GetMethod('Beta');
+  LCount := 0;
+  for LParam in LMethod.Parameters do
+    Inc(LCount);
+  if LCount <> 2 then
+    Fail(Format('for..in Parameters visitou %d parametros; esperado exatamente 2 (AArg, AText)',
+      [LCount]));
 end;
 
 end.

@@ -93,6 +93,22 @@ type
     procedure TestModernValue_AsType_Record;
     [Test]
     procedure TestModernValue_AsType_Enum;
+
+    // issue #27 — for..in sobre as coleções (cinco comuns + Parameters
+    // itera parametros reais no Delphi). O irmao que espera exceção nao e
+    // publicado aqui (padrao "dois cenarios distintos + duas cascas" da #25).
+    [Test]
+    procedure TestFields_ForIn_IteratesFields;
+    [Test]
+    procedure TestProperties_ForIn_IteratesProperties;
+    [Test]
+    procedure TestMethods_ForIn_IteratesMethods;
+    [Test]
+    procedure TestAttributes_ForIn_IteratesAttributes;
+    [Test]
+    procedure TestEmptyCollection_ForIn_DoesNotLoop;
+    [Test]
+    procedure TestParameters_ForIn_IteratesRealParameters;
   end;
 
 implementation
@@ -192,6 +208,38 @@ end;
 procedure TTestModernRTTI.TestModernValue_AsType_Enum;
 begin
   Scenario_ModernValue_AsType_Enum;
+end;
+
+// --- Issue #27 ---------------------------------------------------------------
+
+procedure TTestModernRTTI.TestFields_ForIn_IteratesFields;
+begin
+  Scenario_Fields_ForIn_IteratesFields;
+end;
+
+procedure TTestModernRTTI.TestProperties_ForIn_IteratesProperties;
+begin
+  Scenario_Properties_ForIn_IteratesProperties;
+end;
+
+procedure TTestModernRTTI.TestMethods_ForIn_IteratesMethods;
+begin
+  Scenario_Methods_ForIn_IteratesMethods;
+end;
+
+procedure TTestModernRTTI.TestAttributes_ForIn_IteratesAttributes;
+begin
+  Scenario_Attributes_ForIn_IteratesAttributes;
+end;
+
+procedure TTestModernRTTI.TestEmptyCollection_ForIn_DoesNotLoop;
+begin
+  Scenario_EmptyCollection_ForIn_DoesNotLoop;
+end;
+
+procedure TTestModernRTTI.TestParameters_ForIn_IteratesRealParameters;
+begin
+  Scenario_Parameters_ForIn_IteratesRealParameters;
 end;
 
 initialization
