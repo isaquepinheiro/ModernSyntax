@@ -18,7 +18,7 @@ correspondente e o ciclo ativo.
 | 005 | [#10](https://github.com/isaquepinheiro/ModernSyntax/issues/10) | Implementar Pilar 3 — TModernInvoker (ModernSyntax.Invoker.pas + cenários + cascas DUnitX e FPCUnit) | 📤 PR aberto — [#19](https://github.com/isaquepinheiro/ModernSyntax/pull/19) |
 | 006 | [#8](https://github.com/isaquepinheiro/ModernSyntax/issues/8) | Pilar 1 ModernRTTI — Source/ModernSyntax.RTTI.pas + cascas de teste (re-entrada pós plan-gate:on_reject) | 📤 PR aberto — [#20](https://github.com/isaquepinheiro/ModernSyntax/pull/20) |
 | 004 | [#7](https://github.com/isaquepinheiro/ModernSyntax/issues/7) | Reimplementar callbacks transversais — nova iteração após plan-gate:on_reject (ciclo 003) | 📤 PR aberto — [#18](https://github.com/isaquepinheiro/ModernSyntax/pull/18) |
-| 007 | [#23](https://github.com/isaquepinheiro/ModernSyntax/issues/23) | chore: renomear variáveis locais addr→LAddress, m→LMethod nos dois overloads de Invoke<TSignature> em Source/ModernSyntax.Invoker.pas | 📤 PR aberto — [#30](https://github.com/isaquepinheiro/ModernSyntax/pull/30) |
+| 008 | [#21](https://github.com/isaquepinheiro/ModernSyntax/issues/21) | TModernRTTIField portável nos dois compiladores — mesmo tipo, dois mecanismos por dentro (FPC via vmtFieldTable, Delphi via TRttiField) | 🔄 in-review |
 
 ## Legenda
 
@@ -53,13 +53,6 @@ implementar `Source/ModernSyntax.Invoker.pas` com `TModernInvoker` (record
 com dois overloads `Invoke<TSignature>` sobre `TObject.MethodAddress`),
 unit compartilhada de sete cenários e duas cascas finas (DUnitX + FPCUnit).
 
-**Ciclo 007** — MAESTRO MODE. A issue #23 é a demanda oficial deste ciclo
-(intake do maestro). Nenhuma issue ou Epic adicional criada. Demanda:
-renomear variáveis locais `addr` → `LAddress` e `m` → `LMethod` nos dois
-overloads de `Invoke<TSignature>` em `Source/ModernSyntax.Invoker.pas`;
-build limpo FPC 3.2.2 x86_64 — 7 testes, 0 falhas; diff limitado a um
-arquivo. Label: `chore`, `naming-convention`, `modernrtti`.
-
 **Ciclo 006** — MAESTRO MODE. A issue #8 é a demanda oficial deste ciclo
 (re-entrada da demanda Pilar 1 ModernRTTI, após plan-gate:on_reject nos
 ciclos anteriores). Nenhuma issue ou Epic adicional criada. Demanda:
@@ -68,3 +61,12 @@ portável; TModernRTTIField Delphi-only em {$IFNDEF FPC}; EModernRTTIError),
 unit compartilhada de cenários, cascas DUnitX + FPCUnit, runner Delphi e
 PTestRTTI.lpr + .lpi standalone FPC (padrão commit 7114cdc). Compilar FPC
 antes de entregar.
+
+**Ciclo 008** — MAESTRO MODE. A issue #21 é a demanda oficial deste ciclo
+(intake do maestro: `aefos:investigated`). Nenhuma issue ou Epic adicional
+criada. Demanda: tornar `TModernRTTIField` e `TModernRTTIType.GetFields`
+portáveis nos dois compiladores — declaração pública incondicional, factories
+privadas `FromRaw` (FPC) / `FromRtti` (Delphi), loop de herança via
+`vmtFieldTable` tipada no FPC, subindo por `ClassParent`. Três arquivos
+modificados: `Source/ModernSyntax.RTTI.pas`, `Test Shared/EclbrSystem/UScenarios.RTTI.pas`,
+`Test FPC/EclbrSystem/UTestMS.RTTI.pas`. Build FPC 3.2.2 x86_64 e i386 obrigatório.

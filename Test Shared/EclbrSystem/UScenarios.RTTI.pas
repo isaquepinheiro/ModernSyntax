@@ -61,11 +61,32 @@ type
     property Silent: Integer read FSilent write FSilent;
   end;
 
+  // Fixture com heranca para Scenario_GetFields_EnumeratesInheritedPublishedClassFields
+  // (issue #21). Duas razoes de forma (D12 do ADR issue #21):
+  //   1. Sem heranca, o cenario passaria verde mesmo com a subida por
+  //      ClassParent quebrada (recursivo e nao-recursivo dariam a mesma
+  //      contagem). Com heranca (InnerA em TBase, InnerB em TDerived),
+  //      recursivo = 2, nao-recursivo = 1 — divergencia visivel.
+  //   2. TInner como classe nomeada torna visivel a regra "so tipo classe":
+  //      TObject cru inline esconderia essa restricao no proprio teste.
+{$M+}
+  TInner = class end;
+
+  TBase = class
+    InnerA: TInner;
+  end;
+
+  TPortableFieldFixture = class(TBase)
+    InnerB: TInner;
+  end;
+{$M-}
+
 procedure Scenario_GetProperties_ReturnsPublishedProps;
 procedure Scenario_GetValue_Integer_Roundtrip;
 procedure Scenario_GetValue_String_Roundtrip;
 procedure Scenario_GetValue_Currency_Roundtrip;
 procedure Scenario_MissingM_RaisesEModernRTTIError;
+procedure Scenario_GetFields_EnumeratesInheritedPublishedClassFields;
 
 implementation
 
@@ -190,6 +211,33 @@ begin
     Fail('GetProperties de classe sem M+/published nao levantou EModernRTTIError');
   if Pos('nao expoe propriedades a RTTI', LMsg) = 0 then
     Fail(Format('EModernRTTIError com mensagem inesperada: "%s"', [LMsg]));
+end;
+
+procedure Scenario_GetFields_EnumeratesInheritedPublishedClassFields;
+var
+  LFields: TArray<TModernRTTIField>;
+  LIdx: Integer;
+  LFoundA, LFoundB: Boolean;
+begin
+  LFields := TModernRTTI.GetType(TPortableFieldFixture).GetFields;
+  // Contagem EXATA (D12 do ADR issue #21): >= 1 esconderia regressao
+  // da subida por ClassParent; >= 2 esconderia duplicacao.
+  if Length(LFields) <> 2 then
+    Fail(Format('GetFields devolveu %d campos; esperado exatamente 2 (InnerA herdado + InnerB proprio)',
+      [Length(LFields)]));
+
+  // Verificacao por busca de nome — ordem NAO e especificada (D10 do ADR).
+  LFoundA := False;
+  LFoundB := False;
+  for LIdx := 0 to High(LFields) do
+  begin
+    if LFields[LIdx].Name = 'InnerA' then LFoundA := True;
+    if LFields[LIdx].Name = 'InnerB' then LFoundB := True;
+  end;
+  if not LFoundA then
+    Fail('Campo InnerA (herdado de TBase) ausente do retorno de GetFields');
+  if not LFoundB then
+    Fail('Campo InnerB (declarado em TPortableFieldFixture) ausente do retorno de GetFields');
 end;
 
 end.
