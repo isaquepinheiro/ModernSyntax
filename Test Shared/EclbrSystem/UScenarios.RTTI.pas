@@ -30,6 +30,19 @@ uses
   ModernSyntax.RTTI;
 
 type
+  /// <summary>
+  ///   Excecao usada por Fail(...) neste arquivo (Slice 3 / D-25.7 do ADR
+  ///   issue #25 — fecha ModernSyntax #35). Padrao herdado de
+  ///   UTestMS.Attributes.Scenarios.pas:31 e
+  ///   UTestMS.Callback.Scenarios.pas:42. Antes, Fail levantava Exception
+  ///   generica — PTestRTTI devolvia exit 0 sobre vermelho (matriz medida
+  ///   no relatorio da issue #25), e a prova de mutacao nao valia nada em
+  ///   CI. Com uma excecao propria, FPCUnit e DUnitX classificam a falha
+  ///   como "failed" (nao "error"), e o exit code do runner reflete o
+  ///   vermelho.
+  /// </summary>
+  ETestScenarioFailed = class(Exception);
+
   // Nota tecnica: FPC 3.2.2 nao aceita propriedades published de tipo record
   // (medido: erro "This kind of property cannot be published") e nem expoe
   // propriedades public pela sua Rtti.GetProperties (medido: propcount=0).
@@ -81,18 +94,77 @@ type
   end;
 {$M-}
 
+  // Fixture com heranca para os cenarios de metodo do ciclo 010 / issue #25.
+  // D-25.5 do ADR: usa APENAS published (nao public) para que a contagem
+  // exata (Length(GetMethods)=2 em TMethodDerived) valha nos dois
+  // compiladores — o Delphi enumera public+published enquanto o FPC so
+  // enumera published, e a diferenca sobre published-so e simetrica.
+  //
+  // D-25.2 do ADR: TMethodBase publica Alpha; TMethodDerived (que herda de
+  // TMethodBase) publica Gama. Isso permite provar M1 (mutacao "desligar
+  // subida por ClassParent em MethodTokens" → cenario `_Exact` falha).
+  //
+  // Efeito colateral observavel: os metodos incrementam um contador de
+  // modulo (Slice 4 do plan). O contador nao pode viver dentro de var da
+  // classe — precisa ser globalmente inspecionavel pelo cenario. Contador
+  // em variavel de unit satisfaz e nao contamina outros cenarios porque
+  // cada cenario zera antes de invocar.
+{$M+}
+  TMethodBase = class
+  published
+    procedure Alpha;
+  end;
+
+  TMethodDerived = class(TMethodBase)
+  published
+    procedure Gama;
+  end;
+{$M-}
+
 procedure Scenario_GetProperties_ReturnsPublishedProps;
 procedure Scenario_GetValue_Integer_Roundtrip;
 procedure Scenario_GetValue_String_Roundtrip;
 procedure Scenario_GetValue_Currency_Roundtrip;
 procedure Scenario_MissingM_RaisesEModernRTTIError;
 procedure Scenario_GetFields_EnumeratesInheritedPublishedClassFields;
+procedure Scenario_GetMethods_CountsPublishedInherited_Exact;
+procedure Scenario_GetMethod_ByName_FindsInherited;
+procedure Scenario_Method_Invoke_NoArgs;
 
 implementation
 
+uses
+  ModernSyntax.Invoker;
+
+var
+  // Contador do efeito colateral observavel de Alpha/Gama — inspecionado
+  // pelo cenario Scenario_Method_Invoke_NoArgs. Cada cenario zera antes de
+  // invocar para nao vazar estado entre execucoes.
+  GMethodInvokeCounter: Integer;
+
+{ TMethodBase }
+
+procedure TMethodBase.Alpha;
+begin
+  Inc(GMethodInvokeCounter);
+end;
+
+{ TMethodDerived }
+
+procedure TMethodDerived.Gama;
+begin
+  Inc(GMethodInvokeCounter);
+end;
+
 procedure Fail(const AMsg: string);
 begin
-  raise Exception.Create(AMsg);
+  // D-25.7 do ADR issue #25 (fecha ModernSyntax #35): antes esta linha
+  // levantava Exception generica, o que fazia FPCUnit classificar como
+  // "error" e (dependendo do runner) devolver exit code 0 sobre vermelho.
+  // ETestScenarioFailed e uma classe propria — os frameworks distinguem
+  // "failed" (asserticao) de "error" (excecao inesperada) e o exit code
+  // reflete o vermelho corretamente.
+  raise ETestScenarioFailed.Create(AMsg);
 end;
 
 function HasProperty(const AProps: TArray<TModernRTTIProperty>; const AName: string): Boolean;
@@ -238,6 +310,85 @@ begin
     Fail('Campo InnerA (herdado de TBase) ausente do retorno de GetFields');
   if not LFoundB then
     Fail('Campo InnerB (declarado em TPortableFieldFixture) ausente do retorno de GetFields');
+end;
+
+function HasMethod(const AMethods: TArray<TModernRTTIMethod>;
+  const AName: string): Boolean;
+var
+  LIdx: Integer;
+begin
+  Result := False;
+  for LIdx := 0 to High(AMethods) do
+    if SameText(AMethods[LIdx].Name, AName) then
+      Exit(True);
+end;
+
+procedure Scenario_GetMethods_CountsPublishedInherited_Exact;
+var
+  LMethods: TArray<TModernRTTIMethod>;
+begin
+  // D-25.5 + prova de mutacao M1 (D-25.10) do ADR issue #25:
+  //   TMethodDerived tem UM published proprio (Gama) e UM published
+  //   herdado de TMethodBase (Alpha). Contagem EXATA = 2. Uma mutacao que
+  //   desligue a subida por ClassParent em MethodTokens (M1) faz este
+  //   cenario falhar — sem contagem exata, a mutacao passaria despercebida.
+  LMethods := TModernRTTI.GetType(TMethodDerived).GetMethods;
+  if Length(LMethods) <> 2 then
+    Fail(Format('GetMethods devolveu %d metodos; esperado exatamente 2 ' +
+      '(Alpha herdado + Gama proprio)', [Length(LMethods)]));
+
+  // Verificacao por busca de nome — ordem NAO e especificada (XMLDoc).
+  if not HasMethod(LMethods, 'Alpha') then
+    Fail('Metodo Alpha (herdado de TMethodBase) ausente do retorno de GetMethods');
+  if not HasMethod(LMethods, 'Gama') then
+    Fail('Metodo Gama (declarado em TMethodDerived) ausente do retorno de GetMethods');
+end;
+
+procedure Scenario_GetMethod_ByName_FindsInherited;
+var
+  LMethod: TModernRTTIMethod;
+begin
+  // D-25.3 do ADR: no FPC, TObject.MethodAddress sobe a cadeia por conta
+  // propria — GetMethod('Alpha') sobre TMethodDerived deve encontrar o
+  // metodo herdado. No Delphi, TRttiType.GetMethod tambem alcanca herdado.
+  LMethod := TModernRTTI.GetType(TMethodDerived).GetMethod('Alpha');
+  if not SameText(LMethod.Name, 'Alpha') then
+    Fail(Format('GetMethod("Alpha") devolveu handle com Name="%s"; esperado "Alpha"',
+      [LMethod.Name]));
+end;
+
+procedure Scenario_Method_Invoke_NoArgs;
+type
+  // Assinatura tipada — D-25.9 do ADR: superficie TSignature do Pilar 3
+  // (TModernInvoker.Invoke<T>). O invocador so aceita "metodo-de-objeto"
+  // (SizeOf(TMethod)); TProc = procedure of object sem argumentos e o
+  // caso mais simples.
+  TAlphaProc = procedure of object;
+var
+  LObj: TMethodBase;
+  LMethod: TModernRTTIMethod;
+  LFn: TAlphaProc;
+  LBefore, LAfter: Integer;
+begin
+  LObj := TMethodBase.Create;
+  try
+    GMethodInvokeCounter := 0;
+    LBefore := GMethodInvokeCounter;
+
+    LMethod := TModernRTTI.GetType(TMethodBase).GetMethod('Alpha');
+    LFn := LMethod.Invoke<TAlphaProc>(LObj);
+    LFn();
+
+    LAfter := GMethodInvokeCounter;
+    // Efeito colateral observavel — se Invoke nao chamou Alpha, o contador
+    // nao mudou. Comparacao exata evita falso-positivo por concorrencia
+    // (nao ha concorrencia neste runner, mas a assercao e explicita).
+    if LAfter <> LBefore + 1 then
+      Fail(Format('Invoke de Alpha nao incrementou o contador; before=%d, after=%d, esperado=%d',
+        [LBefore, LAfter, LBefore + 1]));
+  finally
+    LObj.Free;
+  end;
 end;
 
 end.
