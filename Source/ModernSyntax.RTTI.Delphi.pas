@@ -35,6 +35,22 @@ uses
   Rtti,
   ModernSyntax.RTTI;
 
+type
+  /// <summary>
+  ///   Backend-local operations record — D-2 do ADR issue #26. Homonimo com
+  ///   ModernSyntax.RTTI.FPC.TValueOps por construcao: as duas units nunca
+  ///   entram na mesma compilacao (a unit publica ModernSyntax.RTTI faz uses
+  ///   de exatamente uma delas via {$IFDEF FPC}). Nao introduzir uma
+  ///   terceira unit que faca uses das duas (D-10 do ADR).
+  /// </summary>
+  TValueOps = record
+    /// <summary>
+    ///   Delphi: delegacao pura ao TValue.AsType&lt;T&gt; nativo — herda a
+    ///   semantica de conversao (inclusive alargamento de ordinais).
+    /// </summary>
+    class function AsType<T>(const AValue: TValue): T; static;
+  end;
+
 // --- Fields ------------------------------------------------------------------
 
 function FieldEnumerate(AClass: TClass): TArray<TModernRTTIField>;
@@ -68,6 +84,17 @@ function ParameterParamType(AOwner: TClass; ATypeToken: Pointer):
   TModernRTTIType;
 
 implementation
+
+// --- TValueOps ---------------------------------------------------------------
+
+class function TValueOps.AsType<T>(const AValue: TValue): T;
+begin
+  // D-3 do ADR issue #26: delegacao pura. Consumidor Delphi de
+  // LProp.GetValue<Int64> sobre propriedade Integer continua funcionando
+  // como sempre — sem regressao possivel; a divergencia de alargamento com
+  // o FPC esta declarada em voz alta no XMLDoc de TModernValue.AsType<T>.
+  Result := AValue.AsType<T>;
+end;
 
 // --- Fields ------------------------------------------------------------------
 

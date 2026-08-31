@@ -39,9 +39,27 @@ type
     procedure TestGetMethods_CountsPublishedInherited_Exact;
     procedure TestGetMethod_ByName_FindsInherited;
     procedure TestMethod_Invoke_NoArgs;
+    // issue #26 — TModernValue.AsType<T> (5 tipos do CA + record + enum,
+    // via cenarios compartilhados) + assercao LOCAL do backend FPC para
+    // conversao entre tipos diferentes (D-9 do ADR: valido ate a issue de
+    // alargamento ser resolvida — no Delphi nao existe equivalente porque
+    // o TValue nativo pode passar por alargamento e "levanta OU converte"
+    // nao vale nada como teste).
+    procedure TestModernValue_AsType_String;
+    procedure TestModernValue_AsType_Integer;
+    procedure TestModernValue_AsType_Boolean;
+    procedure TestModernValue_AsType_Double;
+    procedure TestModernValue_AsType_Object;
+    procedure TestModernValue_AsType_Record;
+    procedure TestModernValue_AsType_Enum;
+    procedure TestModernValue_AsType_DifferentType_RaisesWithOriginAndDestination;
   end;
 
 implementation
+
+uses
+  SysUtils,
+  ModernSyntax.RTTI;
 
 procedure TTestModernRTTI.TestGetProperties_ReturnsPublishedProps;
 begin
@@ -86,6 +104,79 @@ end;
 procedure TTestModernRTTI.TestMethod_Invoke_NoArgs;
 begin
   Scenario_Method_Invoke_NoArgs;
+end;
+
+// --- Issue #26 ---------------------------------------------------------------
+
+procedure TTestModernRTTI.TestModernValue_AsType_String;
+begin
+  Scenario_ModernValue_AsType_String;
+end;
+
+procedure TTestModernRTTI.TestModernValue_AsType_Integer;
+begin
+  Scenario_ModernValue_AsType_Integer;
+end;
+
+procedure TTestModernRTTI.TestModernValue_AsType_Boolean;
+begin
+  Scenario_ModernValue_AsType_Boolean;
+end;
+
+procedure TTestModernRTTI.TestModernValue_AsType_Double;
+begin
+  Scenario_ModernValue_AsType_Double;
+end;
+
+procedure TTestModernRTTI.TestModernValue_AsType_Object;
+begin
+  Scenario_ModernValue_AsType_Object;
+end;
+
+procedure TTestModernRTTI.TestModernValue_AsType_Record;
+begin
+  Scenario_ModernValue_AsType_Record;
+end;
+
+procedure TTestModernRTTI.TestModernValue_AsType_Enum;
+begin
+  Scenario_ModernValue_AsType_Enum;
+end;
+
+procedure TTestModernRTTI.TestModernValue_AsType_DifferentType_RaisesWithOriginAndDestination;
+var
+  LRec: TPonto;
+  LValue: TModernValue;
+  LRaised: Boolean;
+  LMsg: string;
+begin
+  // D-4 do ADR issue #26: FPC exige tipo exato. Este teste vive AQUI (nao
+  // em UScenarios.RTTI.pas — CA-5) porque no Delphi o TValue nativo pode
+  // passar por alargamento e "levanta OU converte" nao vale nada.
+  // Prova de mutacao (D-4 + SKILL.md:92-97): trocar `if not
+  // AValue.IsType(TypeInfo(T))` por `if False` no backend FPC faz este
+  // teste falhar. Executar antes de fechar o PR.
+  LRec.X := 1;
+  LRec.Y := 2;
+  LValue := TModernValue.From<TPonto>(LRec);
+  LRaised := False;
+  LMsg := '';
+  try
+    LValue.AsType<string>;
+  except
+    on E: EModernRTTIError do
+    begin
+      LRaised := True;
+      LMsg := E.Message;
+    end;
+  end;
+  AssertTrue('AsType<string> sobre TValue tipado como TPonto nao levantou EModernRTTIError', LRaised);
+  AssertTrue(
+    Format('EModernRTTIError sem nome de origem "TPonto" em: "%s"', [LMsg]),
+    Pos('TPonto', LMsg) > 0);
+  AssertTrue(
+    Format('EModernRTTIError sem nome de destino "AnsiString" em: "%s"', [LMsg]),
+    Pos('AnsiString', LMsg) > 0);
 end;
 
 initialization
