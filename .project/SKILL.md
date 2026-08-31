@@ -148,28 +148,22 @@ qualquer ciclo que toque `Source/*.pas` ou `Test FPC/`.
   (`dcc32`/`bcc32`) permanece com o autor humano. `.dproj` e escrito no
   padrao dos `PTest*.dpr` existentes.
 
-## Include paths — PTestAttributes (agent-discovered 2026-08-28)
+---
 
-`PTestAttributes.lpr` inclui `UTestMS.Attributes.Symbols.inc` via
-`{$I UTestMS.Attributes.Symbols.inc}`. O `.lpi` registra o diretorio
-correto, mas `plain fpc` nao le o `.lpi`. Sem o flag `-Fi`, o compilador
-aborta com `Cannot open include file`.
+## Include-path flag for PTestAttributes (agent-discovered 2026-08-31)
 
-Adicionar `-Fi"Test Shared/EclbrSystem"` resolve. Comando completo:
+Discovered in cycle 008 (issue #21 verify node). `PTestAttributes.lpr` uses
+`UTestMS.Attributes.Symbols.inc` which lives in `Test Shared/EclbrSystem/`.
+Without `-Fi`, FPC cannot find the include file and aborts with
+`Fatal: Cannot open include file`. Add `-Fi"Test Shared/EclbrSystem"` to the
+compile command:
 
 ```
 rm -rf /tmp/fpcbuild
 mkdir -p /tmp/fpcbuild
 fpc -Mdelphi \
-    -FU/tmp/fpcbuild \
-    -Fu"Source" \
-    -Fu"Test Shared/EclbrSystem" \
-    -Fu"Test FPC/EclbrSystem" \
+    -Fu"Source" -Fu"Test Shared/EclbrSystem" -Fu"Test FPC/EclbrSystem" \
     -Fi"Test Shared/EclbrSystem" \
-    -o/tmp/fpcbuild/PTestAttributes \
+    -FU/tmp/fpcbuild -FE/tmp/fpcbuild \
     "Test FPC/EclbrSystem/PTestAttributes.lpr"
-/tmp/fpcbuild/PTestAttributes --all -a --format=plain
 ```
-
-Outros projetos de teste nao requerem `-Fi` adicional (nao tem `.inc`
-no diretorio compartilhado).

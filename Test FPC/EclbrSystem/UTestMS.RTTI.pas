@@ -35,6 +35,10 @@ type
     procedure TestGetValue_String_Roundtrip;
     procedure TestGetValue_Currency_Roundtrip;
     procedure TestMissingM_RaisesEModernRTTIError;
+    // issue #25 — TModernRTTIMethod (uma linha util cada; sem if/Assert na casca)
+    procedure TestGetMethods_CountsPublishedInherited_Exact;
+    procedure TestGetMethod_ByName_FindsInherited;
+    procedure TestMethod_Invoke_NoArgs;
   end;
 
 implementation
@@ -62,6 +66,21 @@ end;
 procedure TTestModernRTTI.TestMissingM_RaisesEModernRTTIError;
 begin
   Scenario_MissingM_RaisesEModernRTTIError;
+end;
+
+procedure TTestModernRTTI.TestGetMethods_CountsPublishedInherited_Exact;
+begin
+  Scenario_GetMethods_CountsPublishedInherited_Exact;
+end;
+
+procedure TTestModernRTTI.TestGetMethod_ByName_FindsInherited;
+begin
+  Scenario_GetMethod_ByName_FindsInherited;
+end;
+
+procedure TTestModernRTTI.TestMethod_Invoke_NoArgs;
+begin
+  Scenario_Method_Invoke_NoArgs;
 end;
 
 initialization

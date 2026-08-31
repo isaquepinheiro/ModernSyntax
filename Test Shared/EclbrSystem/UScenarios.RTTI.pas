@@ -30,6 +30,18 @@ uses
   ModernSyntax.RTTI;
 
 type
+  /// <summary>
+  ///   Excecao levantada pelos cenarios compartilhados quando uma pre-condicao
+  ///   ou pos-condicao nao e satisfeita. Padrao das outras suites
+  ///   compartilhadas (UTestMS.Attributes.Scenarios.pas:31 e
+  ///   UTestMS.Callback.Scenarios.pas:42). Substitui Exception generica para
+  ///   que os cascas de teste distingam vermelho intencional de vermelho por
+  ///   defeito, e para que PTestRTTI devolva exit != 0 sobre reprovacao
+  ///   (fecha ModernSyntax#35 — antes o PTestRTTI devolvia exit 0 mesmo com
+  ///   cenario reprovado, o que anula CI baseado em exit code).
+  /// </summary>
+  ETestScenarioFailed = class(Exception);
+
   // Nota tecnica: FPC 3.2.2 nao aceita propriedades published de tipo record
   // (medido: erro "This kind of property cannot be published") e nem expoe
   // propriedades public pela sua Rtti.GetProperties (medido: propcount=0).
@@ -61,17 +73,96 @@ type
     property Silent: Integer read FSilent write FSilent;
   end;
 
+  // Fixture com heranca para os cenarios de metodos (issue #25).
+  // Publicada com {$M+} porque no FPC 3.2.2 a vmtMethodTable so enumera
+  // metodos published — mesmo criterio da divergencia declarada em
+  // TModernRTTIType.GetMethods (D-25.5). Delphi ve os mesmos published; a
+  // contagem exata (Length = 2 em TMethodDerived) funciona nos dois.
+{$M+}
+  TMethodBase = class
+  published
+    procedure Alpha;
+  end;
+
+  TMethodDerived = class(TMethodBase)
+  published
+    procedure Gama;
+  end;
+{$M-}
+
+  // Assinaturas para Invoke<TSignature> — precisam ser tipos de metodo-de-objeto
+  // (Data + Code = 16 bytes em x86_64, 8 em i386). Ver TModernInvoker.
+  TProcNoArgs = procedure of object;
+
 procedure Scenario_GetProperties_ReturnsPublishedProps;
 procedure Scenario_GetValue_Integer_Roundtrip;
 procedure Scenario_GetValue_String_Roundtrip;
 procedure Scenario_GetValue_Currency_Roundtrip;
 procedure Scenario_MissingM_RaisesEModernRTTIError;
 
+// Cenarios de metodo (issue #25). Todos usam Fail; zero Assert; zero {$IFDEF FPC}.
+procedure Scenario_GetMethods_CountsPublishedInherited_Exact;
+procedure Scenario_GetMethod_ByName_FindsInherited;
+procedure Scenario_Method_Invoke_NoArgs;
+
+// Contador de efeito colateral observavel por Invoke (ver Alpha/Gama).
+function TakeAlphaCallCount: Integer;
+function TakeGamaCallCount: Integer;
+procedure ResetCallCounters;
+
 implementation
+
+var
+  GAlphaCallCount: Integer = 0;
+  GGamaCallCount: Integer = 0;
+
+// -- Fixture bodies ------------------------------------------------------
+
+procedure TMethodBase.Alpha;
+begin
+  Inc(GAlphaCallCount);
+end;
+
+procedure TMethodDerived.Gama;
+begin
+  Inc(GGamaCallCount);
+end;
+
+// -- Counters ------------------------------------------------------------
+
+function TakeAlphaCallCount: Integer;
+begin
+  Result := GAlphaCallCount;
+end;
+
+function TakeGamaCallCount: Integer;
+begin
+  Result := GGamaCallCount;
+end;
+
+procedure ResetCallCounters;
+begin
+  GAlphaCallCount := 0;
+  GGamaCallCount := 0;
+end;
+
+// -- Fail bridge ---------------------------------------------------------
 
 procedure Fail(const AMsg: string);
 begin
-  raise Exception.Create(AMsg);
+  raise ETestScenarioFailed.Create(AMsg);
+end;
+
+// -- Method scenarios helpers -------------------------------------------
+
+function HasMethodByName(const AMethods: TArray<TModernRTTIMethod>; const AName: string): Boolean;
+var
+  LIdx: Integer;
+begin
+  Result := False;
+  for LIdx := 0 to High(AMethods) do
+    if SameText(AMethods[LIdx].Name, AName) then
+      Exit(True);
 end;
 
 function HasProperty(const AProps: TArray<TModernRTTIProperty>; const AName: string): Boolean;
@@ -190,6 +281,57 @@ begin
     Fail('GetProperties de classe sem M+/published nao levantou EModernRTTIError');
   if Pos('nao expoe propriedades a RTTI', LMsg) = 0 then
     Fail(Format('EModernRTTIError com mensagem inesperada: "%s"', [LMsg]));
+end;
+
+// -- Method scenarios (issue #25) ---------------------------------------
+
+procedure Scenario_GetMethods_CountsPublishedInherited_Exact;
+var
+  LMethods: TArray<TModernRTTIMethod>;
+begin
+  LMethods := TModernRTTI.GetType(TMethodDerived).GetMethods;
+  if Length(LMethods) <> 2 then
+    Fail(Format('GetMethods(TMethodDerived) devolveu %d; esperado exatamente 2 ' +
+      '(Alpha herdado + Gama declarado) — M1: se ClassParent nao subir a cadeia, ' +
+      'este cenario cai para 1', [Length(LMethods)]));
+  if not HasMethodByName(LMethods, 'Alpha') then
+    Fail('Metodo "Alpha" (herdado de TMethodBase) ausente do retorno de GetMethods');
+  if not HasMethodByName(LMethods, 'Gama') then
+    Fail('Metodo "Gama" (declarado em TMethodDerived) ausente do retorno de GetMethods');
+end;
+
+procedure Scenario_GetMethod_ByName_FindsInherited;
+var
+  LMethod: TModernRTTIMethod;
+begin
+  LMethod := TModernRTTI.GetType(TMethodDerived).GetMethod('Alpha');
+  if not SameText(LMethod.Name, 'Alpha') then
+    Fail(Format('GetMethod("Alpha") devolveu metodo com Name="%s"; esperado "Alpha"',
+      [LMethod.Name]));
+end;
+
+procedure Scenario_Method_Invoke_NoArgs;
+var
+  LObj: TMethodDerived;
+  LMethod: TModernRTTIMethod;
+  LFn: TProcNoArgs;
+  LBefore, LAfter: Integer;
+begin
+  LObj := TMethodDerived.Create;
+  try
+    ResetCallCounters;
+    LBefore := TakeAlphaCallCount;
+    LMethod := TModernRTTI.GetType(TMethodDerived).GetMethod('Alpha');
+    LFn := LMethod.Invoke<TProcNoArgs>(LObj);
+    LFn();
+    LAfter := TakeAlphaCallCount;
+    if LAfter <> LBefore + 1 then
+      Fail(Format('Invoke<TProcNoArgs> de "Alpha" nao produziu efeito colateral: ' +
+        'contador antes=%d depois=%d (esperado depois=%d)',
+        [LBefore, LAfter, LBefore + 1]));
+  finally
+    LObj.Free;
+  end;
 end;
 
 end.
