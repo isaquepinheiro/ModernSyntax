@@ -35,6 +35,10 @@ type
     procedure TestGetValue_Currency_Roundtrip;
     procedure TestMissingM_RaisesEModernRTTIError;
     procedure TestGetFields_EnumeratesInheritedPublishedClassFields;
+    // issue #25 — TModernRTTIMethod pela vmtMethodTable.
+    procedure TestGetMethods_CountsPublishedInherited_Exact;
+    procedure TestGetMethod_ByName_FindsInherited;
+    procedure TestMethod_Invoke_NoArgs;
   end;
 
 implementation
@@ -67,6 +71,21 @@ end;
 procedure TTestModernRTTI.TestGetFields_EnumeratesInheritedPublishedClassFields;
 begin
   Scenario_GetFields_EnumeratesInheritedPublishedClassFields;
+end;
+
+procedure TTestModernRTTI.TestGetMethods_CountsPublishedInherited_Exact;
+begin
+  Scenario_GetMethods_CountsPublishedInherited_Exact;
+end;
+
+procedure TTestModernRTTI.TestGetMethod_ByName_FindsInherited;
+begin
+  Scenario_GetMethod_ByName_FindsInherited;
+end;
+
+procedure TTestModernRTTI.TestMethod_Invoke_NoArgs;
+begin
+  Scenario_Method_Invoke_NoArgs;
 end;
 
 initialization

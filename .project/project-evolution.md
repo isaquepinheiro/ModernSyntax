@@ -19,6 +19,7 @@ correspondente e o ciclo ativo.
 | 006 | [#8](https://github.com/isaquepinheiro/ModernSyntax/issues/8) | Pilar 1 ModernRTTI — Source/ModernSyntax.RTTI.pas + cascas de teste (re-entrada pós plan-gate:on_reject) | 📤 PR aberto — [#20](https://github.com/isaquepinheiro/ModernSyntax/pull/20) |
 | 004 | [#7](https://github.com/isaquepinheiro/ModernSyntax/issues/7) | Reimplementar callbacks transversais — nova iteração após plan-gate:on_reject (ciclo 003) | 📤 PR aberto — [#18](https://github.com/isaquepinheiro/ModernSyntax/pull/18) |
 | 008 | [#21](https://github.com/isaquepinheiro/ModernSyntax/issues/21) | TModernRTTIField portável nos dois compiladores — mesmo tipo, dois mecanismos por dentro (FPC via vmtFieldTable, Delphi via TRttiField) | 📤 PR aberto — [#34](https://github.com/isaquepinheiro/ModernSyntax/pull/34) |
+| 010 | [#25](https://github.com/isaquepinheiro/ModernSyntax/issues/25) | TModernRTTIMethod pela vmtMethodTable — enumerar published, split de backends RTTI, migrar TModernRTTIField, fechar #35 | 🔄 in-review |
 
 ## Legenda
 
@@ -70,3 +71,12 @@ privadas `FromRaw` (FPC) / `FromRtti` (Delphi), loop de herança via
 `vmtFieldTable` tipada no FPC, subindo por `ClassParent`. Três arquivos
 modificados: `Source/ModernSyntax.RTTI.pas`, `Test Shared/EclbrSystem/UScenarios.RTTI.pas`,
 `Test FPC/EclbrSystem/UTestMS.RTTI.pas`. Build FPC 3.2.2 x86_64 e i386 obrigatório.
+
+**Ciclo 010** — MAESTRO MODE. A issue #25 é a demanda oficial deste ciclo
+(intake do maestro: `aefos:investigated`). Nenhuma issue ou Epic adicional
+criada. Demanda: adicionar `TModernRTTIMethod`/`TModernRTTIParameter` com
+`GetMethods`/`GetMethod` nos dois compiladores; split de backends em
+`ModernSyntax.RTTI.Delphi.pas` e `ModernSyntax.RTTI.FPC.pas`; migrar
+`TModernRTTIField` para campos neutros + `FromToken`; fechar #35 com
+declaração de `ETestScenarioFailed` em `UScenarios.RTTI.pas`; três cenários
+compartilhados; cascas de teste FPC e Delphi. Build FPC x86_64 e i386 obrigatório.
