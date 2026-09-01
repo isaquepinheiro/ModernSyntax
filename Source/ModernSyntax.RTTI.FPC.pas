@@ -109,6 +109,15 @@ function ParameterParamType(AOwner: TClass; ATypeToken: Pointer):
 
 function PropertyVisibility(AToken: Pointer): TModernVisibility;
 
+// --- Enumeration (issue #43) -------------------------------------------------
+
+function EnumName(P: PTypeInfo): string;
+function EnumMinValue(P: PTypeInfo): Integer;
+function EnumMaxValue(P: PTypeInfo): Integer;
+function EnumGetName(P: PTypeInfo; AOrdinal: Integer): string;
+function EnumGetValue(P: PTypeInfo; const AName: string): Integer;
+function EnumGetNames(P: PTypeInfo): TArray<string>;
+
 // --- Context (issue #28) -----------------------------------------------------
 
 function ContextCreate: IModernRTTIContextToken;
@@ -179,6 +188,16 @@ resourcestring
   SModernRTTIError_EmptyRegistry =
     'o FPC 3.2.2 nao enumera tipos; registre com TModernRTTIContext.RegisterType ' +
     'os tipos que importam antes de chamar GetTypes.';
+  // Issue #43 — D-43.3/D-43.4/D-43.5 do ADR. As tres resourcestring vivem no
+  // backend (nao na unit publica RTTI.pas) para preservar D-1: a fabrica
+  // FromTypeInfo NAO valida Kind exatamente para nao obrigar resourcestring
+  // na casca. Cada guarda por metodo (D-4) usa uma destas.
+  SEnumWrongKind =
+    'TModernRTTIEnumerationType: PTypeInfo "%s" tem Kind %d; esperado tkEnumeration.';
+  SEnumOrdinalOutOfRange =
+    'TModernRTTIEnumerationType(%s).GetName(%d): ordinal fora de [MinValue..MaxValue].';
+  SEnumNameUnknown =
+    'TModernRTTIEnumerationType(%s).GetValue(''%s''): nome desconhecido.';
 
 // --- TValueOps ---------------------------------------------------------------
 
@@ -434,6 +453,98 @@ begin
     TMemberVisibility.mvPublic:    Result := TModernVisibility.mvPublic;
     TMemberVisibility.mvPublished: Result := TModernVisibility.mvPublished;
   end;
+end;
+
+// --- Enumeration (issue #43) -------------------------------------------------
+
+// Helper NAO-generico compartilhado pelas seis funcoes livres. Nao muda o
+// contrato "cada funcao abre com guarda por Kind" (D-4/D-43.2) — apenas
+// centraliza a construcao da mensagem, que precisa distinguir P = nil (nome
+// "<nil>", Kind 0) de P nao-nil mas com Kind errado (nome e Kind reais).
+procedure EnumRaiseWrongKind(P: PTypeInfo);
+begin
+  if P = nil then
+    raise EModernRTTIError.CreateFmt(SEnumWrongKind, ['<nil>', 0])
+  else
+    raise EModernRTTIError.CreateFmt(SEnumWrongKind,
+      [string(P^.Name), Ord(P^.Kind)]);
+end;
+
+function EnumName(P: PTypeInfo): string;
+begin
+  // D-4/D-43.2: guarda por Kind aberta em cada funcao.
+  if (P = nil) or (P^.Kind <> tkEnumeration) then
+    EnumRaiseWrongKind(P);
+  Result := string(P^.Name);
+end;
+
+function EnumMinValue(P: PTypeInfo): Integer;
+begin
+  if (P = nil) or (P^.Kind <> tkEnumeration) then
+    EnumRaiseWrongKind(P);
+  Result := GetTypeData(P)^.MinValue;
+end;
+
+function EnumMaxValue(P: PTypeInfo): Integer;
+begin
+  if (P = nil) or (P^.Kind <> tkEnumeration) then
+    EnumRaiseWrongKind(P);
+  Result := GetTypeData(P)^.MaxValue;
+end;
+
+function EnumGetName(P: PTypeInfo; AOrdinal: Integer): string;
+var
+  LTD: PTypeData;
+begin
+  // D-4/D-43.2 + D-43.3 (M-1): guarda por Kind, depois guarda por faixa
+  // ANTES de delegar a TypInfo.GetEnumName — no FPC 3.2.2, GetEnumName(P, -1)
+  // devolve o primeiro nome silenciosamente (indistinguivel de resposta
+  // legitima). Este raise torna a garantia local (D-26).
+  if (P = nil) or (P^.Kind <> tkEnumeration) then
+    EnumRaiseWrongKind(P);
+  LTD := GetTypeData(P);
+  if (AOrdinal < LTD^.MinValue) or (AOrdinal > LTD^.MaxValue) then
+    raise EModernRTTIError.CreateFmt(SEnumOrdinalOutOfRange,
+      [string(P^.Name), AOrdinal]);
+  Result := TypInfo.GetEnumName(P, AOrdinal);
+end;
+
+function EnumGetValue(P: PTypeInfo; const AName: string): Integer;
+begin
+  // D-4/D-43.2 + D-43.4 (M-2): captura o retorno de TypInfo.GetEnumValue e
+  // levanta em -1. O sentinela colide com "enum poderia ter ordinal
+  // negativo"; o raise torna a garantia local, nao dependente de outra
+  // propriedade do FPC (D-26).
+  if (P = nil) or (P^.Kind <> tkEnumeration) then
+    EnumRaiseWrongKind(P);
+  Result := TypInfo.GetEnumValue(P, AName);
+  if Result = -1 then
+    raise EModernRTTIError.CreateFmt(SEnumNameUnknown,
+      [string(P^.Name), AName]);
+end;
+
+function EnumGetNames(P: PTypeInfo): TArray<string>;
+var
+  LTD: PTypeData;
+  LMin, LMax, LI: Integer;
+begin
+  // D-4/D-43.2: guarda por Kind. O laco MinValue..MaxValue e seguro no FPC
+  // 3.2.2 apenas porque enums com valores explicitos (M-3) nao emitem RTTI
+  // (`TypeInfo(TCod = (kX=5))` nao compila). Se um dia esse comportamento
+  // mudar, o laco reintroduz risco de indices fantasma — este comentario e
+  // o alarme (D-43.7 do ADR).
+  //
+  // MUTACAO OBRIGATORIA (D-43.8 / CA-12): trocar LMax por LMax - 1 aqui
+  // deve deixar Scenario_EnumerationType_GetNames_LengthAndPresence
+  // vermelho no runner FPC.
+  if (P = nil) or (P^.Kind <> tkEnumeration) then
+    EnumRaiseWrongKind(P);
+  LTD := GetTypeData(P);
+  LMin := LTD^.MinValue;
+  LMax := LTD^.MaxValue;
+  SetLength(Result, LMax - LMin + 1);
+  for LI := LMin to LMax do
+    Result[LI - LMin] := TypInfo.GetEnumName(P, LI);
 end;
 
 // --- Context (issue #28) -----------------------------------------------------
