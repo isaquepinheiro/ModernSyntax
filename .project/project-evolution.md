@@ -25,6 +25,7 @@ correspondente e o ciclo ativo.
 | 013 | [#28](https://github.com/isaquepinheiro/ModernSyntax/issues/28) | TModernRTTIContext com GetTypes e FindType nos dois compiladores — token opaco IInterface, registry per-instancia FPC, GetPackages fora com motivo, cinco cenarios compartilhados | 📤 PR aberto — [#41](https://github.com/isaquepinheiro/ModernSyntax/pull/41) |
 | 015 | [#42](https://github.com/isaquepinheiro/ModernSyntax/issues/42) | TModernVisibility publico; fechar vazamento em TModernRTTIMethod.Visibility; adicionar TModernRTTIProperty.Visibility — backends Delphi/FPC, tres cenarios, mutacao de sanidade | 📤 PR aberto — [#47](https://github.com/isaquepinheiro/ModernSyntax/pull/47) |
 | 016 | [#43](https://github.com/isaquepinheiro/ModernSyntax/issues/43) | TModernRTTIEnumerationType com guards M-1/M-2 nos dois backends; seis funcoes livres FPC, paridade Delphi, quatro cenarios compartilhados, mutacao de sanidade | 📤 PR aberto — [#48](https://github.com/isaquepinheiro/ModernSyntax/pull/48) |
+| 017 | [#44](https://github.com/isaquepinheiro/ModernSyntax/issues/44) | TModernRTTIPointerType com ReferredType nos dois compiladores; backend FPC com property RefType e MUTACAO OBRIGATORIA; backend Delphi com paridade; dois cenarios compartilhados; mutacao de sanidade | 🔄 in-review |
 
 ## Legenda
 
@@ -117,3 +118,23 @@ acionável (origem + destino). Reescrever `TModernRTTIProperty.GetValue<T>` em
 uma linha via `TModernValue`; remover `{$IFDEF FPC}` das linhas 385–397.
 Sete cenários compartilhados + 1 published local FPC para caso de exceção.
 Build FPC x86_64 e i386 obrigatório; autor confirma Delphi 12.
+
+**Ciclo 016** — MAESTRO MODE. A issue #43 é a demanda oficial deste ciclo
+(intake do maestro: `aefos:investigated`). Nenhuma issue ou Epic adicional criada.
+Demanda: implementar `TModernRTTIEnumerationType` com seis funções livres nos
+backends FPC e Delphi, guards M-1/M-2, três `resourcestring` novas por backend,
+quatro cenários compartilhados com fixtures `TCor` e `TDia`, mutação de sanidade
+obrigatória. Build FPC 3.2.2 x86_64 e i386 obrigatório.
+
+**Ciclo 017** — MAESTRO MODE. A issue #44 é a demanda oficial deste ciclo
+(intake do maestro: `aefos:running`). Nenhuma issue ou Epic adicional criada.
+Demanda: implementar `TModernRTTIPointerType` — record público em
+`Source/ModernSyntax.RTTI.pas` com `strict private FToken: PTypeInfo`, factory
+`FromTypeInfo` sem guarda de Kind e property `ReferredType: TModernRTTIType`;
+backend FPC com `PointerTypeReferredType` usando property `RefType`, guarda por
+Kind, `resourcestring SPointerWrongKind` e comentário `MUTACAO OBRIGATORIA`
+prescrevendo `PTypeInfo(GetTypeData(P)^.RefTypeRef)` com cast; backend Delphi com
+paridade via `TRttiPointerType(...).ReferredType` sem `is` nem `try/except` extra;
+fixture `PInt44 = ^Integer`; dois cenários compartilhados; duas procedures em cada
+casca; mutação verificada. Fecha `Closes #44`; parte de `#29`. Build FPC 3.2.2
+x86_64 e i386 obrigatório.
