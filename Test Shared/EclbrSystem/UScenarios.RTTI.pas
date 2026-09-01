@@ -207,6 +207,14 @@ procedure Scenario_Attributes_ForIn_IteratesAttributes;
 procedure Scenario_EmptyCollection_ForIn_DoesNotLoop;
 procedure Scenario_Parameters_ForIn_RaisesOnFPC;
 procedure Scenario_Parameters_ForIn_IteratesRealParameters;
+// Cenarios da issue #28 — TModernRTTIContext. Um FPC-only na casca
+// (EmptyRegistry_Raises) porque o pool nativo do Delphi torna registry-vazio
+// impossivel de simular (padrao "dois cenarios distintos" da #25).
+procedure Scenario_Context_GetTypes_EmptyRegistry_Raises;
+procedure Scenario_Context_GetTypes_AfterTwoRegisterType_ContainsBoth;
+procedure Scenario_Context_FindType_Class_Found;
+procedure Scenario_Context_FindType_NotFound_ReturnsNil;
+procedure Scenario_Context_CopyByValue_SharesState_NoUseAfterFree;
 
 implementation
 
@@ -741,6 +749,167 @@ begin
   if LCount <> 2 then
     Fail(Format('for..in Parameters visitou %d parametros; esperado exatamente 2 (AArg, AText)',
       [LCount]));
+end;
+
+// --- Issue #28 — TModernRTTIContext ------------------------------------------
+
+function CtxHasTypeByName(const ATypes: TArray<TModernRTTIType>;
+  const AName: string): Boolean;
+var
+  LIdx: Integer;
+begin
+  // Busca por nome (nao por Length) — o pool nativo do Delphi tem contagem
+  // indefinida, e o cenario compartilhado precisa valer nos dois.
+  Result := False;
+  for LIdx := 0 to High(ATypes) do
+    if SameText(ATypes[LIdx].Name, AName) then
+      Exit(True);
+end;
+
+procedure Scenario_Context_GetTypes_EmptyRegistry_Raises;
+var
+  LCtx: TModernRTTIContext;
+  LRaised: Boolean;
+  LMsg: string;
+begin
+  // MUTACAO OBRIGATORIA (D-28.10 do ADR ciclo 013): remover o `raise
+  // EModernRTTIError` do ContextGetTypes no backend FPC
+  // (ModernSyntax.RTTI.FPC.pas) deve tornar este cenario vermelho. Se
+  // ficar verde, a proteção do D-28.4 foi silenciada.
+  //
+  // Este cenario e publicado APENAS na casca FPC — o pool nativo do
+  // Delphi torna registry-vazio impossivel de simular (padrao "dois
+  // cenarios distintos" da #25).
+  LCtx := TModernRTTIContext.Create;
+  LRaised := False;
+  LMsg := '';
+  try
+    LCtx.GetTypes;
+  except
+    on E: EModernRTTIError do
+    begin
+      LRaised := True;
+      LMsg := E.Message;
+    end;
+  end;
+  if not LRaised then
+    Fail('GetTypes sobre registry vazio nao levantou EModernRTTIError — ' +
+      'proteção D-28.4 silenciada');
+  if Pos('RegisterType', LMsg) = 0 then
+    Fail(Format('EModernRTTIError sem mensagem instrutiva (mencao a RegisterType): "%s"', [LMsg]));
+end;
+
+procedure Scenario_Context_GetTypes_AfterTwoRegisterType_ContainsBoth;
+var
+  LCtx: TModernRTTIContext;
+  LTypes: TArray<TModernRTTIType>;
+begin
+  // Registra dois tipos e verifica presenca dos dois pela busca por nome
+  // no array. NAO usa Length — o pool nativo do Delphi tem contagem
+  // indefinida (regra 2 do ADENDO do ciclo 004, tocando #38).
+  LCtx := TModernRTTIContext.Create;
+  LCtx.RegisterType(TypeInfo(TPortableFixture));
+  LCtx.RegisterType(TypeInfo(TInner));
+  LTypes := LCtx.GetTypes;
+  if not CtxHasTypeByName(LTypes, 'TPortableFixture') then
+    Fail('GetTypes nao encontrou TPortableFixture apos RegisterType');
+  if not CtxHasTypeByName(LTypes, 'TInner') then
+    Fail('GetTypes nao encontrou TInner apos RegisterType');
+end;
+
+procedure Scenario_Context_FindType_Class_Found;
+var
+  LCtx: TModernRTTIContext;
+  LResult: TModernRTTIType;
+begin
+  // Registra TPortableFixture e busca pelo qualified name.
+  // UnitName do FPC / Delphi para esta classe = 'UScenarios.RTTI'.
+  LCtx := TModernRTTIContext.Create;
+  LCtx.RegisterType(TypeInfo(TPortableFixture));
+  LResult := LCtx.FindType('UScenarios.RTTI.TPortableFixture');
+  if LResult.IsNil then
+    Fail('FindType nao encontrou "UScenarios.RTTI.TPortableFixture" apos RegisterType');
+  if not SameText(LResult.Name, 'TPortableFixture') then
+    Fail(Format('FindType devolveu handle com Name="%s"; esperado "TPortableFixture"',
+      [LResult.Name]));
+end;
+
+procedure Scenario_Context_FindType_NotFound_ReturnsNil;
+var
+  LCtx: TModernRTTIContext;
+  LResult: TModernRTTIType;
+begin
+  // Nome inventado, nao registrado — `nil` aqui e resposta legitima
+  // (RB-5 do ESP): FindType nunca levanta por miss.
+  LCtx := TModernRTTIContext.Create;
+  LResult := LCtx.FindType('UScenarios.RTTI.QueNaoExiste_XYZ_28');
+  if not LResult.IsNil then
+    Fail(Format('FindType de nome inexistente nao devolveu IsNil; obteve Name="%s"',
+      [LResult.Name]));
+end;
+
+procedure Scenario_Context_CopyByValue_SharesState_NoUseAfterFree;
+var
+  LA, LB: TModernRTTIContext;
+  LTypesFromB, LTypesFromA, LFinal: TArray<TModernRTTIType>;
+  LSecondRaised: Boolean;
+begin
+  // D-28.10 — este cenario mata a regressao do desenho `Pointer` (M-E do
+  // relatorio da issue #28). Afirma AS QUATRO coisas encadeadas:
+  //   (a) B enxerga o que A registrou (LB := LA compartilha estado);
+  //   (b) o estado e compartilhado nos dois sentidos (B registra, A ve);
+  //   (c) apos A.Free, B.GetTypes continua com a contagem certa por
+  //       busca por nome (nao ha use-after-free, nao ha lixo);
+  //   (d) B.Free posterior NAO levanta (nao ha double-free).
+  //
+  // Se este cenario passar com FHandle: Pointer + ContextFree(Pointer)
+  // de volta, a proteção morreu.
+  LA := TModernRTTIContext.Create;
+  LA.RegisterType(TypeInfo(TPortableFixture));
+  LA.RegisterType(TypeInfo(TInner));
+
+  // (a) copia por valor compartilha estado — refcount da IInterface
+  //     agrega a copia (o record LB carrega a mesma FToken de LA).
+  LB := LA;
+  LTypesFromB := LB.GetTypes;
+  if not CtxHasTypeByName(LTypesFromB, 'TPortableFixture') then
+    Fail('(a) B.GetTypes nao viu TPortableFixture registrado por A — ' +
+      'copia por valor nao compartilha estado');
+  if not CtxHasTypeByName(LTypesFromB, 'TInner') then
+    Fail('(a) B.GetTypes nao viu TInner registrado por A');
+
+  // (b) B registra um terceiro, A enxerga — estado bidirecional.
+  LB.RegisterType(TypeInfo(TValueObj));
+  LTypesFromA := LA.GetTypes;
+  if not CtxHasTypeByName(LTypesFromA, 'TValueObj') then
+    Fail('(b) A.GetTypes nao viu TValueObj registrado por B — ' +
+      'estado nao e compartilhado nos dois sentidos');
+
+  // (c) A libera; B continua com contagem certa (busca por nome).
+  //     Se copia fosse Pointer, aqui B.Count cairia para 1 (medido no
+  //     relatorio da issue #28).
+  LA.Free;
+  LFinal := LB.GetTypes;
+  if not CtxHasTypeByName(LFinal, 'TPortableFixture') then
+    Fail('(c) apos A.Free, B.GetTypes perdeu TPortableFixture — ' +
+      'use-after-free silencioso do desenho Pointer');
+  if not CtxHasTypeByName(LFinal, 'TInner') then
+    Fail('(c) apos A.Free, B.GetTypes perdeu TInner');
+  if not CtxHasTypeByName(LFinal, 'TValueObj') then
+    Fail('(c) apos A.Free, B.GetTypes perdeu TValueObj');
+
+  // (d) segundo Free posterior NAO levanta. Se copia fosse Pointer com
+  //     ContextFree(Pointer), aqui levantaria EInvalidPointer.
+  LSecondRaised := False;
+  try
+    LB.Free;
+  except
+    on E: Exception do
+      LSecondRaised := True;
+  end;
+  if LSecondRaised then
+    Fail('(d) B.Free posterior levantou — regressao do desenho Pointer ' +
+      '(double-free). D-28.10 do ADR silenciada.');
 end;
 
 end.

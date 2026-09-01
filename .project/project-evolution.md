@@ -22,6 +22,7 @@ correspondente e o ciclo ativo.
 | 010 | [#25](https://github.com/isaquepinheiro/ModernSyntax/issues/25) | TModernRTTIMethod pela vmtMethodTable — enumerar published, split de backends RTTI, migrar TModernRTTIField, fechar #35 | 📤 PR aberto — [#37](https://github.com/isaquepinheiro/ModernSyntax/pull/37) |
 | 011 | [#26](https://github.com/isaquepinheiro/ModernSyntax/issues/26) | TModernValue.AsType<T> portavel — TValueOps nos backends Delphi+FPC, reescrever GetValue<T>, 7 cenarios compartilhados + 1 published local FPC | 📤 PR aberto — [#39](https://github.com/isaquepinheiro/ModernSyntax/pull/39) |
 | 012 | [#27](https://github.com/isaquepinheiro/ModernSyntax/issues/27) | Enumerators nas colecoes: for..in sobre Fields, Properties, Methods, Parameters, Attributes — property alias sobre TArray<T> nos dois compiladores | 📤 PR aberto — [#40](https://github.com/isaquepinheiro/ModernSyntax/pull/40) |
+| 013 | [#28](https://github.com/isaquepinheiro/ModernSyntax/issues/28) | TModernRTTIContext com GetTypes e FindType nos dois compiladores — token opaco IInterface, registry per-instancia FPC, GetPackages fora com motivo, cinco cenarios compartilhados | 🔄 in-review |
 
 ## Legenda
 

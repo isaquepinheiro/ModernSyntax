@@ -105,7 +105,18 @@ function ParameterName(AOwner: TClass; const AName: string;
 function ParameterParamType(AOwner: TClass; ATypeToken: Pointer):
   TModernRTTIType;
 
+// --- Context (issue #28) -----------------------------------------------------
+
+function ContextCreate: IModernRTTIContextToken;
+function ContextGetType(AToken: IModernRTTIContextToken; ATypeInfo: PTypeInfo): TModernRTTIType;
+function ContextRegisterType(AToken: IModernRTTIContextToken; ATypeInfo: PTypeInfo): TModernRTTIType;
+function ContextGetTypes(AToken: IModernRTTIContextToken): TArray<TModernRTTIType>;
+function ContextFindType(AToken: IModernRTTIContextToken; const AQualifiedName: string): TModernRTTIType;
+
 implementation
+
+uses
+  Classes;
 
 resourcestring
   SFPCNoConstructor =
@@ -146,6 +157,11 @@ resourcestring
   // levantam com esta mensagem.
   SModernValueIncompatibleType =
     'incompativel: origem=%s destino=%s';
+  // Issue #28 — D-28.4. `GetTypes` sobre registry vazio LEVANTA em vez de
+  // devolver array vazio. Mensagem instrutiva: diz o que fazer.
+  SModernRTTIError_EmptyRegistry =
+    'o FPC 3.2.2 nao enumera tipos; registre com TModernRTTIContext.RegisterType ' +
+    'os tipos que importam antes de chamar GetTypes.';
 
 // --- TValueOps ---------------------------------------------------------------
 
@@ -370,6 +386,133 @@ function ParameterParamType(AOwner: TClass; ATypeToken: Pointer):
 begin
   Result := Default(TModernRTTIType);
   raise EModernRTTIError.Create(SFPCNoParamType);
+end;
+
+// --- Context (issue #28) -----------------------------------------------------
+
+type
+  /// <summary>
+  ///   Estado interno do `TModernRTTIContext` no FPC: um `TRttiContext`
+  ///   nativo per-instancia e um `FRegistry: TList` (de `PTypeInfo`)
+  ///   alimentado por `GetType`/`RegisterType`. O ciclo de vida e o do
+  ///   refcount da `IInterface` — o ultimo record que segurar o token
+  ///   dispara `Destroy` e libera o registry.
+  /// </summary>
+  TFPCContextToken = class(TInterfacedObject, IModernRTTIContextToken)
+  private
+    FContext: TRttiContext;
+    FRegistry: TList;
+  public
+    constructor Create;
+    destructor Destroy; override;
+  end;
+
+constructor TFPCContextToken.Create;
+begin
+  inherited Create;
+  FContext := TRttiContext.Create;
+  FRegistry := TList.Create;
+end;
+
+destructor TFPCContextToken.Destroy;
+begin
+  FRegistry.Free;
+  // FContext e um record valor — nao ha Free a chamar aqui (o TRttiContext
+  // do FPC libera automaticamente ao sair de escopo do objeto).
+  inherited Destroy;
+end;
+
+function ContextCreate: IModernRTTIContextToken;
+begin
+  Result := TFPCContextToken.Create;
+end;
+
+function RegistryEnsure(AToken: TFPCContextToken; ATypeInfo: PTypeInfo): Boolean;
+var
+  LIdx: Integer;
+begin
+  // Evita duplicar: registro por identidade de PTypeInfo. TList.IndexOf
+  // ja compara por Pointer — nao precisamos escrever laco a mao.
+  Result := False;
+  if ATypeInfo = nil then
+    Exit;
+  LIdx := AToken.FRegistry.IndexOf(ATypeInfo);
+  if LIdx < 0 then
+  begin
+    AToken.FRegistry.Add(ATypeInfo);
+    Result := True;
+  end;
+end;
+
+function ContextGetType(AToken: IModernRTTIContextToken; ATypeInfo: PTypeInfo): TModernRTTIType;
+var
+  LTok: TFPCContextToken;
+begin
+  LTok := AToken as TFPCContextToken;
+  RegistryEnsure(LTok, ATypeInfo);
+  Result := TModernRTTIType.FromRtti(LTok.FContext.GetType(ATypeInfo));
+end;
+
+function ContextRegisterType(AToken: IModernRTTIContextToken; ATypeInfo: PTypeInfo): TModernRTTIType;
+var
+  LTok: TFPCContextToken;
+begin
+  LTok := AToken as TFPCContextToken;
+  RegistryEnsure(LTok, ATypeInfo);
+  Result := TModernRTTIType.FromRtti(LTok.FContext.GetType(ATypeInfo));
+end;
+
+function ContextGetTypes(AToken: IModernRTTIContextToken): TArray<TModernRTTIType>;
+var
+  LTok: TFPCContextToken;
+  LIdx: Integer;
+  LInfo: PTypeInfo;
+begin
+  LTok := AToken as TFPCContextToken;
+  // D-28.4: registry vazio LEVANTA em vez de devolver array vazio silencioso.
+  // A mensagem instrutiva diz exatamente o que fazer (SKILL.md — nao silenciar
+  // divergencia).
+  //
+  // MUTACAO OBRIGATORIA: remover este raise deve deixar o cenario
+  // Scenario_Context_GetTypes_EmptyRegistry_Raises vermelho no runner FPC
+  // (D-28.10 do ADR issue #28).
+  if LTok.FRegistry.Count = 0 then
+    raise EModernRTTIError.Create(SModernRTTIError_EmptyRegistry);
+
+  SetLength(Result, LTok.FRegistry.Count);
+  for LIdx := 0 to LTok.FRegistry.Count - 1 do
+  begin
+    LInfo := PTypeInfo(LTok.FRegistry[LIdx]);
+    Result[LIdx] := TModernRTTIType.FromRtti(LTok.FContext.GetType(LInfo));
+  end;
+end;
+
+function ContextFindType(AToken: IModernRTTIContextToken; const AQualifiedName: string): TModernRTTIType;
+var
+  LTok: TFPCContextToken;
+  LIdx: Integer;
+  LInfo: PTypeInfo;
+  LQualified: string;
+begin
+  LTok := AToken as TFPCContextToken;
+  Result := TModernRTTIType.FromRtti(nil);
+  for LIdx := 0 to LTok.FRegistry.Count - 1 do
+  begin
+    LInfo := PTypeInfo(LTok.FRegistry[LIdx]);
+    if LInfo = nil then
+      Continue;
+    // D-28.5: SO resolve tkClass. Fora de tkClass, o campo UnitName nao
+    // existe no layout de TTypeData (medido kind a kind nos dois bitness
+    // — le lixo ou AV silencioso). Outros kinds sao PULADOS, nao levantam.
+    if LInfo^.Kind <> tkClass then
+      Continue;
+    LQualified := GetTypeData(LInfo)^.UnitName + '.' + string(LInfo^.Name);
+    if LQualified = AQualifiedName then
+    begin
+      Result := TModernRTTIType.FromRtti(LTok.FContext.GetType(LInfo));
+      Exit;
+    end;
+  end;
 end;
 
 end.

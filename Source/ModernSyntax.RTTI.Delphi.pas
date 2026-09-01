@@ -83,6 +83,14 @@ function ParameterName(AOwner: TClass; const AName: string;
 function ParameterParamType(AOwner: TClass; ATypeToken: Pointer):
   TModernRTTIType;
 
+// --- Context (issue #28) -----------------------------------------------------
+
+function ContextCreate: IModernRTTIContextToken;
+function ContextGetType(AToken: IModernRTTIContextToken; ATypeInfo: PTypeInfo): TModernRTTIType;
+function ContextRegisterType(AToken: IModernRTTIContextToken; ATypeInfo: PTypeInfo): TModernRTTIType;
+function ContextGetTypes(AToken: IModernRTTIContextToken): TArray<TModernRTTIType>;
+function ContextFindType(AToken: IModernRTTIContextToken; const AQualifiedName: string): TModernRTTIType;
+
 implementation
 
 // --- TValueOps ---------------------------------------------------------------
@@ -263,6 +271,81 @@ function ParameterParamType(AOwner: TClass; ATypeToken: Pointer):
   TModernRTTIType;
 begin
   Result := TModernRTTIType.FromRtti(TRttiType(ATypeToken));
+end;
+
+// --- Context (issue #28) -----------------------------------------------------
+
+type
+  /// <summary>
+  ///   Estado interno do `TModernRTTIContext` no Delphi: um `TRttiContext`
+  ///   nativo per-instancia. Alocacao per-instancia (nao reusa o
+  ///   `FContext` global de `TModernRTTI`) para simetria com o backend
+  ///   FPC. O ciclo de vida e o do refcount da `IInterface`.
+  /// </summary>
+  TDelphiContextToken = class(TInterfacedObject, IModernRTTIContextToken)
+  private
+    FContext: TRttiContext;
+  public
+    constructor Create;
+    destructor Destroy; override;
+  end;
+
+constructor TDelphiContextToken.Create;
+begin
+  inherited Create;
+  FContext := TRttiContext.Create;
+end;
+
+destructor TDelphiContextToken.Destroy;
+begin
+  FContext.Free;
+  inherited Destroy;
+end;
+
+function ContextCreate: IModernRTTIContextToken;
+begin
+  Result := TDelphiContextToken.Create;
+end;
+
+function ContextGetType(AToken: IModernRTTIContextToken; ATypeInfo: PTypeInfo): TModernRTTIType;
+begin
+  Result := TModernRTTIType.FromRtti(
+    (AToken as TDelphiContextToken).FContext.GetType(ATypeInfo));
+end;
+
+function ContextRegisterType(AToken: IModernRTTIContextToken; ATypeInfo: PTypeInfo): TModernRTTIType;
+begin
+  // D-28.7: no Delphi RegisterType e no-op logico — o pool nativo do
+  // TRttiContext ja carrega os tipos. Devolvemos o handle nativo por
+  // consistencia com o FPC (que devolve o mesmo formato de retorno).
+  Result := TModernRTTIType.FromRtti(
+    (AToken as TDelphiContextToken).FContext.GetType(ATypeInfo));
+end;
+
+function ContextGetTypes(AToken: IModernRTTIContextToken): TArray<TModernRTTIType>;
+var
+  LTypes: TArray<TRttiType>;
+  LIdx: Integer;
+begin
+  // Delega ao pool nativo — TRttiContext.GetTypes retorna todos os tipos
+  // conhecidos pelo Delphi. Registry-vazio-levanta e comportamento
+  // exclusivo do FPC (D-28.4) — no Delphi o pool nativo torna o cenario
+  // "empty" impossivel de simular (padrao "dois cenarios distintos"
+  // da #25 — o cenario Scenario_Context_GetTypes_EmptyRegistry_Raises
+  // e publicado APENAS na casca FPC).
+  LTypes := (AToken as TDelphiContextToken).FContext.GetTypes;
+  SetLength(Result, Length(LTypes));
+  for LIdx := 0 to High(LTypes) do
+    Result[LIdx] := TModernRTTIType.FromRtti(LTypes[LIdx]);
+end;
+
+function ContextFindType(AToken: IModernRTTIContextToken; const AQualifiedName: string): TModernRTTIType;
+begin
+  // Delega ao FindType nativo — o Delphi cobre todos os kinds pelo
+  // qualified name. Divergencia com FPC (que so resolve tkClass) esta
+  // declarada em XMLDoc de TModernRTTIContext.FindType (D-28.5).
+  Result := TModernRTTIType.FromRtti(
+    (AToken as TDelphiContextToken).FContext.FindType(AQualifiedName));
 end;
 
 end.

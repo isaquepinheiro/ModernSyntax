@@ -109,6 +109,17 @@ type
     procedure TestEmptyCollection_ForIn_DoesNotLoop;
     [Test]
     procedure TestParameters_ForIn_IteratesRealParameters;
+
+    // issue #28 — TModernRTTIContext. Quatro cenarios (todos exceto
+    // EmptyRegistry_Raises — FPC-only na casca, D-28.10 do ADR).
+    [Test]
+    procedure TestContext_GetTypes_AfterTwoRegisterType_ContainsBoth;
+    [Test]
+    procedure TestContext_FindType_Class_Found;
+    [Test]
+    procedure TestContext_FindType_NotFound_ReturnsNil;
+    [Test]
+    procedure TestContext_CopyByValue_SharesState_NoUseAfterFree;
   end;
 
 implementation
@@ -240,6 +251,28 @@ end;
 procedure TTestModernRTTI.TestParameters_ForIn_IteratesRealParameters;
 begin
   Scenario_Parameters_ForIn_IteratesRealParameters;
+end;
+
+// --- Issue #28 ---------------------------------------------------------------
+
+procedure TTestModernRTTI.TestContext_GetTypes_AfterTwoRegisterType_ContainsBoth;
+begin
+  Scenario_Context_GetTypes_AfterTwoRegisterType_ContainsBoth;
+end;
+
+procedure TTestModernRTTI.TestContext_FindType_Class_Found;
+begin
+  Scenario_Context_FindType_Class_Found;
+end;
+
+procedure TTestModernRTTI.TestContext_FindType_NotFound_ReturnsNil;
+begin
+  Scenario_Context_FindType_NotFound_ReturnsNil;
+end;
+
+procedure TTestModernRTTI.TestContext_CopyByValue_SharesState_NoUseAfterFree;
+begin
+  Scenario_Context_CopyByValue_SharesState_NoUseAfterFree;
 end;
 
 initialization
