@@ -175,6 +175,14 @@ type
     /// </remarks>
     function GetFields: TArray<TModernRTTIField>;
     class function FromRtti(const AType: TRttiType): TModernRTTIType; static;
+    /// <summary>
+    ///   True quando o handle envolve `nil` (por exemplo, resposta de
+    ///   `TModernRTTIContext.FindType` para nome nao encontrado).
+    ///   `nil` aqui e resposta legitima, nao falha escondida — este
+    ///   predicado torna a resposta inspecionavel sem obrigar o
+    ///   consumidor a comparar `Result.Name` ou apanhar excecao.
+    /// </summary>
+    function IsNil: Boolean;
   end;
 
   /// <summary>Handle leve para um parametro de metodo (issue #25).</summary>
@@ -399,6 +407,114 @@ type
     function AsType<T>: T;
   end;
 
+  /// <summary>
+  ///   Token opaco que carrega o estado interno de `TModernRTTIContext`
+  ///   (D-28.1 do ADR issue #28). Interface **vazia de membros publicos** —
+  ///   so o GUID; o backend recupera o estado tipado via cast contra a
+  ///   classe privada do proprio backend (`TDelphiContextToken` ou
+  ///   `TFPCContextToken`). E o refcount da `IInterface` que agrega N
+  ///   copias do record `TModernRTTIContext`: o ultimo decremento libera,
+  ///   tornando use-after-free e double-free **impossiveis por
+  ///   construcao**.
+  /// </summary>
+  /// <remarks>
+  ///   Frase-fronteira (D-28.2): *"`Pointer` em record e seguro enquanto
+  ///   o record nao e dono; vira bomba no instante em que passa a ser."*
+  ///   `TModernRTTIContext` e o primeiro record publico desta camada que
+  ///   possui heap por instancia — por isso usa `IInterface` em vez de
+  ///   `Pointer`.
+  /// </remarks>
+  IModernRTTIContextToken = interface
+    ['{9D4E0C7C-2F0D-4E0A-9C7A-2D5F1A028E13}']
+  end;
+
+  /// <summary>
+  ///   Contexto RTTI portavel: `Create/Free/GetType/GetTypes/FindType`
+  ///   funcionam nos dois compiladores sem `{$IFDEF FPC}` no consumidor.
+  ///   O estado vive atras de `IModernRTTIContextToken` opaco (refcount
+  ///   agrega copias do record; o ultimo decremento libera).
+  /// </summary>
+  /// <remarks>
+  ///   **`GetPackages` nao existe** nesta superficie. O conceito de
+  ///   "pacote" e do Delphi (`TRttiContext.GetPackages` +
+  ///   `TRttiPackage`); no FPC 3.2.2 nao ha primitiva equivalente. Se um
+  ///   dia fizer falta, entra em issue propria com o desenho de como
+  ///   representar "pacote" no FPC — precedente:
+  ///   `TModernRTTIMethod.GetParameters` fora do FPC pela mesma razao.
+  ///
+  ///   Semantica de copia: como o campo interno e `IInterface`, `B := A`
+  ///   compartilha estado — `A.RegisterType(T)` fica visivel em
+  ///   `B.GetTypes`. Este e o desenho, nao um bug (D-28.10 do ADR).
+  /// </remarks>
+  TModernRTTIContext = record
+  private
+    FToken: IModernRTTIContextToken;
+  public
+    /// <summary>
+    ///   Cria um contexto novo (registry vazio no FPC; `TRttiContext`
+    ///   nativo per-instancia no Delphi).
+    /// </summary>
+    class function Create: TModernRTTIContext; static;
+    /// <summary>
+    ///   Libera o token deste record (`FToken := nil`).
+    ///   **Opcional** — existe por paridade com `TRttiContext.Free` do
+    ///   Delphi. O refcount da `IInterface` libera automaticamente
+    ///   quando o ultimo record que segura o token sai de escopo. Chamar
+    ///   `Free` num record cuja copia ainda vive nao levanta e nao
+    ///   invalida a outra copia — o estado permanece enquanto qualquer
+    ///   copia segurar o token (D-28.10 do ADR).
+    /// </summary>
+    procedure Free;
+    /// <summary>
+    ///   Devolve o handle de tipo para `AClass` (sem alimentar o
+    ///   registry no FPC — use `RegisterType` para isso).
+    /// </summary>
+    function GetType(AClass: TClass): TModernRTTIType; overload;
+    /// <summary>
+    ///   Devolve o handle de tipo para `ATypeInfo`. No FPC, alimenta o
+    ///   registry per-instancia (para que este tipo entre depois em
+    ///   `GetTypes`/`FindType`); no Delphi delega ao contexto nativo.
+    /// </summary>
+    function GetType(ATypeInfo: PTypeInfo): TModernRTTIType; overload;
+    /// <summary>
+    ///   No FPC alimenta o registry per-instancia — passa a fazer
+    ///   `GetTypes`/`FindType` alcancarem este `ATypeInfo`. **No Delphi
+    ///   e no-op**: delega ao `GetType(ATypeInfo)` nativo. Existe para
+    ///   que o codigo portavel seja identico nos dois compiladores.
+    /// </summary>
+    function RegisterType(ATypeInfo: PTypeInfo): TModernRTTIType;
+    /// <summary>
+    ///   Enumera os tipos conhecidos por este contexto.
+    /// </summary>
+    /// <remarks>
+    ///   Divergencia de conteudo declarada em voz alta:
+    ///   no Delphi enumera o **pool nativo** do `TRttiContext`
+    ///   (`TRttiContext.GetTypes`); no FPC enumera o registry
+    ///   **per-instancia** alimentado por `GetType`/`RegisterType`.
+    ///
+    ///   **NO FPC, registry vazio LEVANTA `EModernRTTIError`** com
+    ///   mensagem instrutiva (`SModernRTTIError_EmptyRegistry`) — o
+    ///   nome `GetTypes` promete "todos os tipos"; array vazio silencioso
+    ///   seria indistinguivel de "esqueci de registrar". D-26 do ADR do
+    ///   ciclo 011 (nao silenciar divergencia).
+    /// </remarks>
+    function GetTypes: TArray<TModernRTTIType>;
+    /// <summary>
+    ///   Localiza um tipo por nome qualificado (`UnitName.TypeName`).
+    ///   Nao encontrado devolve `TModernRTTIType` com `IsNil = True`
+    ///   (nunca levanta por miss — `nil` aqui e resposta legitima).
+    /// </summary>
+    /// <remarks>
+    ///   **No FPC so resolve `tkClass`**: enumeracoes, records e
+    ///   escalares registrados sao inalcancaveis por nome — a leitura
+    ///   de `UnitName` fora de `tkClass` acessa campo inexistente
+    ///   naquele layout de `TTypeData` (lixo ou AV sem erro de
+    ///   compilacao). No Delphi delega ao `TRttiContext.FindType`
+    ///   nativo, que cobre todos os kinds.
+    /// </remarks>
+    function FindType(const AQualifiedName: string): TModernRTTIType;
+  end;
+
   /// <summary>Entry point para leitura de RTTI portavel.</summary>
   /// <remarks>
   ///   Ownership: os handles devolvidos por GetType (e por chamadas em
@@ -415,6 +531,13 @@ type
     class var FContext: TRttiContext;
   public
     /// <summary>Devolve o handle de tipo para AClass.</summary>
+    /// <remarks>
+    ///   NAO alimenta `TModernRTTIContext.GetTypes` de nenhuma instancia;
+    ///   para enumeracao, use `TModernRTTIContext.RegisterType` ou
+    ///   `TModernRTTIContext.GetType` — este `GetType` estatico opera
+    ///   sobre o `TRttiContext` global (`FContext`), nao sobre o
+    ///   registry per-instancia do backend FPC.
+    /// </remarks>
     class function GetType(AClass: TClass): TModernRTTIType; overload; static;
     /// <summary>Devolve o handle de tipo para ATypeInfo.</summary>
     class function GetType(ATypeInfo: PTypeInfo): TModernRTTIType; overload; static;
@@ -579,6 +702,11 @@ begin
   Result.FType := AType;
 end;
 
+function TModernRTTIType.IsNil: Boolean;
+begin
+  Result := FType = nil;
+end;
+
 function TModernRTTIType.Name: string;
 begin
   Result := FType.Name;
@@ -738,6 +866,50 @@ end;
 function TModernRTTIMethod.Visibility: TMemberVisibility;
 begin
   Result := MethodVisibility(FOwner, FToken);
+end;
+
+{ TModernRTTIContext }
+
+class function TModernRTTIContext.Create: TModernRTTIContext;
+begin
+  // Delega a funcao livre do backend selecionado — a instanciacao real
+  // (`TDelphiContextToken`/`TFPCContextToken`) e paridade estrita entre
+  // as duas units (API-MAP §7). O refcount da IInterface aloca ao criar
+  // e libera quando o ultimo record que segura FToken sai de escopo.
+  Result.FToken := ContextCreate;
+end;
+
+procedure TModernRTTIContext.Free;
+begin
+  // D-28.6: opcional, existe por paridade com TRttiContext.Free do Delphi.
+  // O ultimo decremento do refcount libera; chamar aqui apenas antecipa
+  // esta contagem sobre esta copia particular do record.
+  FToken := nil;
+end;
+
+function TModernRTTIContext.GetType(AClass: TClass): TModernRTTIType;
+begin
+  Result := ContextGetType(FToken, AClass.ClassInfo);
+end;
+
+function TModernRTTIContext.GetType(ATypeInfo: PTypeInfo): TModernRTTIType;
+begin
+  Result := ContextGetType(FToken, ATypeInfo);
+end;
+
+function TModernRTTIContext.RegisterType(ATypeInfo: PTypeInfo): TModernRTTIType;
+begin
+  Result := ContextRegisterType(FToken, ATypeInfo);
+end;
+
+function TModernRTTIContext.GetTypes: TArray<TModernRTTIType>;
+begin
+  Result := ContextGetTypes(FToken);
+end;
+
+function TModernRTTIContext.FindType(const AQualifiedName: string): TModernRTTIType;
+begin
+  Result := ContextFindType(FToken, AQualifiedName);
 end;
 
 { TModernRTTI }

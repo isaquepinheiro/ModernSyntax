@@ -62,6 +62,15 @@ type
     procedure TestAttributes_ForIn_IteratesAttributes;
     procedure TestEmptyCollection_ForIn_DoesNotLoop;
     procedure TestParameters_ForIn_RaisesOnFPC;
+    // issue #28 — TModernRTTIContext. Cinco cenarios; um deles (EmptyRegistry
+    // _Raises) e FPC-only na casca porque o pool nativo do Delphi torna
+    // registry-vazio impossivel de simular. Padrao "dois cenarios distintos"
+    // da #25.
+    procedure TestContext_GetTypes_EmptyRegistry_Raises;
+    procedure TestContext_GetTypes_AfterTwoRegisterType_ContainsBoth;
+    procedure TestContext_FindType_Class_Found;
+    procedure TestContext_FindType_NotFound_ReturnsNil;
+    procedure TestContext_CopyByValue_SharesState_NoUseAfterFree;
   end;
 
 implementation
@@ -218,6 +227,33 @@ end;
 procedure TTestModernRTTI.TestParameters_ForIn_RaisesOnFPC;
 begin
   Scenario_Parameters_ForIn_RaisesOnFPC;
+end;
+
+// --- Issue #28 ---------------------------------------------------------------
+
+procedure TTestModernRTTI.TestContext_GetTypes_EmptyRegistry_Raises;
+begin
+  Scenario_Context_GetTypes_EmptyRegistry_Raises;
+end;
+
+procedure TTestModernRTTI.TestContext_GetTypes_AfterTwoRegisterType_ContainsBoth;
+begin
+  Scenario_Context_GetTypes_AfterTwoRegisterType_ContainsBoth;
+end;
+
+procedure TTestModernRTTI.TestContext_FindType_Class_Found;
+begin
+  Scenario_Context_FindType_Class_Found;
+end;
+
+procedure TTestModernRTTI.TestContext_FindType_NotFound_ReturnsNil;
+begin
+  Scenario_Context_FindType_NotFound_ReturnsNil;
+end;
+
+procedure TTestModernRTTI.TestContext_CopyByValue_SharesState_NoUseAfterFree;
+begin
+  Scenario_Context_CopyByValue_SharesState_NoUseAfterFree;
 end;
 
 initialization
