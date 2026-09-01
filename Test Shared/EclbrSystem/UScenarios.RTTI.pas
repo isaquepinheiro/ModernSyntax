@@ -27,6 +27,7 @@ interface
 
 uses
   SysUtils,
+  TypInfo,
   ModernSyntax.RTTI,
   ModernSyntax.Attributes;
 
@@ -133,6 +134,18 @@ type
 
   TColor = (clRed, clGreen, clBlue);
 
+  // Fixtures da issue #43 (TModernRTTIEnumerationType). Declarados no `type`
+  // da `interface` — o cenario chama TypeInfo(TDia)/TypeInfo(TCor), e no FPC
+  // 3.2.2 TypeInfo() de um enum local a procedure nao gera dado utilizavel.
+  //
+  // TDia (7 elementos) e OBRIGATORIO no cenario de contagem para matar a
+  // mutacao `MaxValue -> MaxValue - 1` em EnumGetNames (D-43.7 / M-4 do
+  // ADR): com TCor (3 elementos), o off-by-one no fim passaria verde. TCor
+  // permanece declarado para uso futuro (D-43.9); nao ha cenario que o
+  // exercite neste PR.
+  TCor = (cA, cB, cC);
+  TDia = (dSeg, dTer, dQua, dQui, dSex, dSab, dDom);
+
   // Classe simples para o cenario _Object — nao precisa de {$M+}: o cenario
   // roundtripa a referencia via TValue.From<TObject>, nao inspeciona
   // propriedades.
@@ -222,6 +235,15 @@ procedure Scenario_Context_CopyByValue_SharesState_NoUseAfterFree;
 procedure Scenario_Method_Visibility_FPC_Raises;
 procedure Scenario_Method_Visibility_Delphi_Returns_mvPublished;
 procedure Scenario_Property_Visibility_Returns_mvPublished;
+// Cenarios da issue #43 — TModernRTTIEnumerationType. Quatro cenarios
+// compartilhados (tres positivos + um negativo). Todos usam TDia (7
+// elementos) — TCor (3 elementos) nao mata a mutacao `MaxValue-1` em
+// EnumGetNames (D-43.7 / M-4). Padrao: try/except + Fail(...), nunca
+// Assert, sem {$IFDEF} (CA-5 do repo).
+procedure Scenario_EnumerationType_NameAndBounds;
+procedure Scenario_EnumerationType_GetNameGetValue;
+procedure Scenario_EnumerationType_GetNames_LengthAndPresence;
+procedure Scenario_EnumerationType_OutOfRangeAndUnknownRaises;
 
 implementation
 
@@ -994,6 +1016,130 @@ begin
   if LVis <> TModernVisibility.mvPublished then
     Fail(Format('Property.Visibility devolveu ordinal %d; esperado %d (mvPublished)',
       [Ord(LVis), Ord(TModernVisibility.mvPublished)]));
+end;
+
+// --- Issue #43 — TModernRTTIEnumerationType ---------------------------------
+
+function DiaHasName(const ANames: TArray<string>; const AName: string): Boolean;
+var
+  LIdx: Integer;
+begin
+  Result := False;
+  for LIdx := 0 to High(ANames) do
+    if ANames[LIdx] = AName then
+      Exit(True);
+end;
+
+procedure Scenario_EnumerationType_NameAndBounds;
+var
+  LEnum: TModernRTTIEnumerationType;
+begin
+  // M-4 autoriza afirmar valor absoluto: MinValue/MaxValue sao iguais nos
+  // dois bitness. Fixture TDia = (dSeg..dDom) => MinValue=0, MaxValue=6.
+  LEnum := TModernRTTIEnumerationType.FromTypeInfo(TypeInfo(TDia));
+  if LEnum.Name <> 'TDia' then
+    Fail(Format('Name devolveu "%s"; esperado "TDia"', [LEnum.Name]));
+  if LEnum.MinValue <> 0 then
+    Fail(Format('MinValue devolveu %d; esperado 0', [LEnum.MinValue]));
+  if LEnum.MaxValue <> 6 then
+    Fail(Format('MaxValue devolveu %d; esperado 6', [LEnum.MaxValue]));
+end;
+
+procedure Scenario_EnumerationType_GetNameGetValue;
+var
+  LEnum: TModernRTTIEnumerationType;
+  LI: Integer;
+  LName: string;
+  LBack: Integer;
+begin
+  // D-6: assertiva por relacao (roundtrip por presenca), nao por posicao
+  // fragil. Para cada ordinal em [MinValue..MaxValue], o nome nao pode ser
+  // vazio, e GetValue(nome) deve devolver o mesmo ordinal.
+  LEnum := TModernRTTIEnumerationType.FromTypeInfo(TypeInfo(TDia));
+  for LI := LEnum.MinValue to LEnum.MaxValue do
+  begin
+    LName := LEnum.GetName(LI);
+    if LName = '' then
+      Fail(Format('GetName(%d) devolveu string vazia para TDia', [LI]));
+    LBack := LEnum.GetValue(LName);
+    if LBack <> LI then
+      Fail(Format('roundtrip quebrou: GetValue(GetName(%d))="%s" = %d; esperado %d',
+        [LI, LName, LBack, LI]));
+  end;
+end;
+
+procedure Scenario_EnumerationType_GetNames_LengthAndPresence;
+var
+  LEnum: TModernRTTIEnumerationType;
+  LNames: TArray<string>;
+begin
+  // D-43.8 / CA-12: MUTACAO OBRIGATORIA — trocar `MaxValue` por
+  // `MaxValue - 1` no laco de EnumGetNames (FPC ou Delphi) deve deixar
+  // este cenario VERMELHO (Length passa a 6 em vez de 7). Fixture TDia
+  // (7 elementos) e obrigatoria: TCor (3 elementos) nao mataria a mutacao
+  // por off-by-one no fim.
+  LEnum := TModernRTTIEnumerationType.FromTypeInfo(TypeInfo(TDia));
+  LNames := LEnum.GetNames;
+  if Length(LNames) <> 7 then
+    Fail(Format('GetNames devolveu %d nomes; esperado exatamente 7 para TDia',
+      [Length(LNames)]));
+  // D-6: verificacao por presenca (ordem preservada tambem — a implementacao
+  // itera MinValue..MaxValue — mas afirmar por presenca torna o cenario
+  // robusto contra mudanca de ordem se um dia alguem "otimizar" de fora
+  // para dentro).
+  if not DiaHasName(LNames, 'dSeg') then Fail('GetNames omitiu "dSeg"');
+  if not DiaHasName(LNames, 'dTer') then Fail('GetNames omitiu "dTer"');
+  if not DiaHasName(LNames, 'dQua') then Fail('GetNames omitiu "dQua"');
+  if not DiaHasName(LNames, 'dQui') then Fail('GetNames omitiu "dQui"');
+  if not DiaHasName(LNames, 'dSex') then Fail('GetNames omitiu "dSex"');
+  if not DiaHasName(LNames, 'dSab') then Fail('GetNames omitiu "dSab"');
+  if not DiaHasName(LNames, 'dDom') then Fail('GetNames omitiu "dDom"');
+end;
+
+procedure Scenario_EnumerationType_OutOfRangeAndUnknownRaises;
+var
+  LEnum: TModernRTTIEnumerationType;
+  LRaised: Boolean;
+begin
+  // R3/R4 do ADR: tres afirmacoes INDEPENDENTES (cada uma em seu try/except
+  // + Fail literal). Cobre M-1 (GetName com ordinal fora da faixa) e M-2
+  // (GetValue com nome desconhecido) juntos.
+  LEnum := TModernRTTIEnumerationType.FromTypeInfo(TypeInfo(TDia));
+
+  // (1) GetName(-1) — M-1: no FPC, TypInfo.GetEnumName(P, -1) devolve
+  //     silenciosamente o primeiro nome ('dSeg'). O guard de faixa em
+  //     EnumGetName deve levantar antes.
+  LRaised := False;
+  try
+    LEnum.GetName(-1);
+  except
+    on E: EModernRTTIError do LRaised := True;
+  end;
+  if not LRaised then
+    Fail('GetName(-1) nao levantou EModernRTTIError (M-1: guard de faixa quebrado)');
+
+  // (2) GetName(MaxValue + 1) — M-1: no FPC, TypInfo.GetEnumName devolve
+  //     string vazia; o guard de faixa deve levantar antes.
+  LRaised := False;
+  try
+    LEnum.GetName(LEnum.MaxValue + 1);
+  except
+    on E: EModernRTTIError do LRaised := True;
+  end;
+  if not LRaised then
+    Fail(Format('GetName(%d) nao levantou EModernRTTIError (M-1: guard de faixa quebrado)',
+      [LEnum.MaxValue + 1]));
+
+  // (3) GetValue('naoExiste') — M-2: TypInfo.GetEnumValue devolve -1
+  //     (sentinela); a captura em EnumGetValue deve levantar.
+  LRaised := False;
+  try
+    LEnum.GetValue('naoExiste');
+  except
+    on E: EModernRTTIError do LRaised := True;
+  end;
+  if not LRaised then
+    Fail('GetValue(''naoExiste'') nao levantou EModernRTTIError (M-2: guard de -1 quebrado)');
 end;
 
 end.

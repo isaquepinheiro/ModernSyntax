@@ -24,6 +24,7 @@ correspondente e o ciclo ativo.
 | 012 | [#27](https://github.com/isaquepinheiro/ModernSyntax/issues/27) | Enumerators nas colecoes: for..in sobre Fields, Properties, Methods, Parameters, Attributes — property alias sobre TArray<T> nos dois compiladores | 📤 PR aberto — [#40](https://github.com/isaquepinheiro/ModernSyntax/pull/40) |
 | 013 | [#28](https://github.com/isaquepinheiro/ModernSyntax/issues/28) | TModernRTTIContext com GetTypes e FindType nos dois compiladores — token opaco IInterface, registry per-instancia FPC, GetPackages fora com motivo, cinco cenarios compartilhados | 📤 PR aberto — [#41](https://github.com/isaquepinheiro/ModernSyntax/pull/41) |
 | 015 | [#42](https://github.com/isaquepinheiro/ModernSyntax/issues/42) | TModernVisibility publico; fechar vazamento em TModernRTTIMethod.Visibility; adicionar TModernRTTIProperty.Visibility — backends Delphi/FPC, tres cenarios, mutacao de sanidade | 📤 PR aberto — [#47](https://github.com/isaquepinheiro/ModernSyntax/pull/47) |
+| 016 | [#43](https://github.com/isaquepinheiro/ModernSyntax/issues/43) | TModernRTTIEnumerationType com guards M-1/M-2 nos dois backends; seis funcoes livres FPC, paridade Delphi, quatro cenarios compartilhados, mutacao de sanidade | 🔄 in-review |
 
 ## Legenda
 

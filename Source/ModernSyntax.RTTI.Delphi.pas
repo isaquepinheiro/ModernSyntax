@@ -87,6 +87,15 @@ function ParameterParamType(AOwner: TClass; ATypeToken: Pointer):
 
 function PropertyVisibility(AToken: Pointer): TModernVisibility;
 
+// --- Enumeration (issue #43) -------------------------------------------------
+
+function EnumName(P: PTypeInfo): string;
+function EnumMinValue(P: PTypeInfo): Integer;
+function EnumMaxValue(P: PTypeInfo): Integer;
+function EnumGetName(P: PTypeInfo; AOrdinal: Integer): string;
+function EnumGetValue(P: PTypeInfo; const AName: string): Integer;
+function EnumGetNames(P: PTypeInfo): TArray<string>;
+
 // --- Context (issue #28) -----------------------------------------------------
 
 function ContextCreate: IModernRTTIContextToken;
@@ -96,6 +105,18 @@ function ContextGetTypes(AToken: IModernRTTIContextToken): TArray<TModernRTTITyp
 function ContextFindType(AToken: IModernRTTIContextToken; const AQualifiedName: string): TModernRTTIType;
 
 implementation
+
+resourcestring
+  // Issue #43 — D-43.5/D-43.6 do ADR. Cada backend tem seu proprio bloco
+  // `resourcestring` (padrao vigente do repo). Texto DUPLICADO com o do
+  // backend FPC para paridade de mensagem — o contrato de erros e identico
+  // por construcao nos dois compiladores (D-2/D-43.6).
+  SEnumWrongKind =
+    'TModernRTTIEnumerationType: PTypeInfo "%s" tem Kind %d; esperado tkEnumeration.';
+  SEnumOrdinalOutOfRange =
+    'TModernRTTIEnumerationType(%s).GetName(%d): ordinal fora de [MinValue..MaxValue].';
+  SEnumNameUnknown =
+    'TModernRTTIEnumerationType(%s).GetValue(''%s''): nome desconhecido.';
 
 // --- TValueOps ---------------------------------------------------------------
 
@@ -306,6 +327,121 @@ function ParameterParamType(AOwner: TClass; ATypeToken: Pointer):
   TModernRTTIType;
 begin
   Result := TModernRTTIType.FromRtti(TRttiType(ATypeToken));
+end;
+
+// --- Enumeration (issue #43) -------------------------------------------------
+
+// Helper NAO-generico compartilhado. Constroi a mensagem com o nome real
+// e o Kind real do PTypeInfo, distinguindo P = nil.
+procedure EnumRaiseWrongKind(P: PTypeInfo);
+begin
+  if P = nil then
+    raise EModernRTTIError.CreateFmt(SEnumWrongKind, ['<nil>', 0])
+  else
+    raise EModernRTTIError.CreateFmt(SEnumWrongKind,
+      [string(P^.Name), Ord(P^.Kind)]);
+end;
+
+function EnumName(P: PTypeInfo): string;
+begin
+  // D-2/D-43.6: paridade estrita com FPC. Guarda por Kind aberta em cada
+  // funcao antes de qualquer delegacao.
+  if (P = nil) or (P^.Kind <> tkEnumeration) then
+    EnumRaiseWrongKind(P);
+  Result := string(P^.Name);
+end;
+
+function EnumMinValue(P: PTypeInfo): Integer;
+var
+  LCtx: TRttiContext;
+  LType: TRttiEnumerationType;
+begin
+  if (P = nil) or (P^.Kind <> tkEnumeration) then
+    EnumRaiseWrongKind(P);
+  LCtx := TRttiContext.Create;
+  try
+    LType := TRttiEnumerationType(LCtx.GetType(P));
+    Result := LType.MinValue;
+  finally
+    LCtx.Free;
+  end;
+end;
+
+function EnumMaxValue(P: PTypeInfo): Integer;
+var
+  LCtx: TRttiContext;
+  LType: TRttiEnumerationType;
+begin
+  if (P = nil) or (P^.Kind <> tkEnumeration) then
+    EnumRaiseWrongKind(P);
+  LCtx := TRttiContext.Create;
+  try
+    LType := TRttiEnumerationType(LCtx.GetType(P));
+    Result := LType.MaxValue;
+  finally
+    LCtx.Free;
+  end;
+end;
+
+function EnumGetName(P: PTypeInfo; AOrdinal: Integer): string;
+var
+  LCtx: TRttiContext;
+  LType: TRttiEnumerationType;
+begin
+  // D-43.6: espelha o guard de M-1 do FPC antes de delegar. Sem esse guard,
+  // se TRttiEnumerationType.GetNames/GetName do Delphi tratar -1 de forma
+  // diferente do FPC, o contrato de erros seria assimetrico. Espelhar aqui
+  // paga a mutacao `MaxValue-1` do lado Delphi tambem.
+  if (P = nil) or (P^.Kind <> tkEnumeration) then
+    EnumRaiseWrongKind(P);
+  LCtx := TRttiContext.Create;
+  try
+    LType := TRttiEnumerationType(LCtx.GetType(P));
+    if (AOrdinal < LType.MinValue) or (AOrdinal > LType.MaxValue) then
+      raise EModernRTTIError.CreateFmt(SEnumOrdinalOutOfRange,
+        [string(P^.Name), AOrdinal]);
+    Result := TypInfo.GetEnumName(P, AOrdinal);
+  finally
+    LCtx.Free;
+  end;
+end;
+
+function EnumGetValue(P: PTypeInfo; const AName: string): Integer;
+begin
+  // D-43.6: espelha o guard de M-2 do FPC. Captura o retorno de
+  // TypInfo.GetEnumValue (mesmo no Delphi) e levanta em -1. Paridade por
+  // construcao.
+  if (P = nil) or (P^.Kind <> tkEnumeration) then
+    EnumRaiseWrongKind(P);
+  Result := TypInfo.GetEnumValue(P, AName);
+  if Result = -1 then
+    raise EModernRTTIError.CreateFmt(SEnumNameUnknown,
+      [string(P^.Name), AName]);
+end;
+
+function EnumGetNames(P: PTypeInfo): TArray<string>;
+var
+  LCtx: TRttiContext;
+  LType: TRttiEnumerationType;
+  LMin, LMax, LI: Integer;
+begin
+  // D-43.7: laco MinValue..MaxValue espelhado do FPC. A mutacao obrigatoria
+  // (D-43.8 / CA-12) — trocar LMax por LMax - 1 aqui — deve deixar
+  // Scenario_EnumerationType_GetNames_LengthAndPresence vermelho tambem no
+  // runner Delphi. Paridade por construcao.
+  if (P = nil) or (P^.Kind <> tkEnumeration) then
+    EnumRaiseWrongKind(P);
+  LCtx := TRttiContext.Create;
+  try
+    LType := TRttiEnumerationType(LCtx.GetType(P));
+    LMin := LType.MinValue;
+    LMax := LType.MaxValue;
+    SetLength(Result, LMax - LMin + 1);
+    for LI := LMin to LMax do
+      Result[LI - LMin] := TypInfo.GetEnumName(P, LI);
+  finally
+    LCtx.Free;
+  end;
 end;
 
 // --- Context (issue #28) -----------------------------------------------------

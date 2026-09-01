@@ -77,6 +77,12 @@ type
     // mvPublished e cross-compiler (D-42.7).
     procedure TestMethod_Visibility_FPC_Raises;
     procedure TestProperty_Visibility_Returns_mvPublished;
+    // issue #43 — TModernRTTIEnumerationType. Quatro cenarios compartilhados
+    // (tres positivos + um negativo com tres afirmacoes independentes).
+    procedure TestEnumerationType_NameAndBounds;
+    procedure TestEnumerationType_GetNameGetValue;
+    procedure TestEnumerationType_GetNames_LengthAndPresence;
+    procedure TestEnumerationType_OutOfRangeAndUnknownRaises;
   end;
 
 implementation
@@ -272,6 +278,28 @@ end;
 procedure TTestModernRTTI.TestProperty_Visibility_Returns_mvPublished;
 begin
   Scenario_Property_Visibility_Returns_mvPublished;
+end;
+
+// --- Issue #43 ---------------------------------------------------------------
+
+procedure TTestModernRTTI.TestEnumerationType_NameAndBounds;
+begin
+  Scenario_EnumerationType_NameAndBounds;
+end;
+
+procedure TTestModernRTTI.TestEnumerationType_GetNameGetValue;
+begin
+  Scenario_EnumerationType_GetNameGetValue;
+end;
+
+procedure TTestModernRTTI.TestEnumerationType_GetNames_LengthAndPresence;
+begin
+  Scenario_EnumerationType_GetNames_LengthAndPresence;
+end;
+
+procedure TTestModernRTTI.TestEnumerationType_OutOfRangeAndUnknownRaises;
+begin
+  Scenario_EnumerationType_OutOfRangeAndUnknownRaises;
 end;
 
 initialization

@@ -550,6 +550,95 @@ type
     function FindType(const AQualifiedName: string): TModernRTTIType;
   end;
 
+  /// <summary>
+  ///   Handle publico proprio para o tipo de categoria **Enumeration** na
+  ///   casca de RTTI (issue #43 — parent #29). Substitui `TRttiEnumerationType`
+  ///   do RTL de cada compilador na superficie desta unit. O consumidor
+  ///   obtem uma instancia via `TModernRTTIEnumerationType.FromTypeInfo(
+  ///   TypeInfo(TMeuEnum))`.
+  /// </summary>
+  /// <remarks>
+  ///   Estado interno (D-43.1 do ADR issue #43): `FToken: PTypeInfo` —
+  ///   handle neutro, o mesmo nome nos dois backends. A fabrica
+  ///   `FromTypeInfo` **nao** valida `Kind`: exigiria `resourcestring` na
+  ///   unit publica, violando D-1. A guarda por `Kind` mora em CADA um dos
+  ///   seis metodos (D-4/D-43.2) e usa `resourcestring` dos backends.
+  ///
+  ///   Contrato de erros identico nos dois compiladores por construcao
+  ///   (D-2/D-43.6): o backend Delphi espelha os guards de M-1 (faixa em
+  ///   `GetName`) e M-2 (raise em `GetValue` quando `-1`) antes de delegar
+  ///   a `TRttiEnumerationType`.
+  ///
+  ///   Enums com valores explicitos (ex.: `TCod = (kX=5, kY=6)`) ficam
+  ///   FORA — FPC 3.2.2 recusa `TypeInfo(TCod)` (M-3). Se um dia isso
+  ///   mudar, o laco `MinValue..MaxValue` de `EnumGetNames` reintroduz
+  ///   risco de indices fantasma; o ADR desta issue e o alarme.
+  /// </remarks>
+  TModernRTTIEnumerationType = record
+  strict private
+    FToken: PTypeInfo;
+  public
+    /// <summary>
+    ///   Constroi um handle a partir do `PTypeInfo` do enum. **Nao valida
+    ///   `Kind`** (D-43.1): a validacao mora em cada metodo abaixo (D-4).
+    /// </summary>
+    class function FromTypeInfo(P: PTypeInfo): TModernRTTIEnumerationType; static;
+    /// <summary>
+    ///   Nome do tipo enum (ex.: `'TDia'`).
+    /// </summary>
+    /// <remarks>
+    ///   Levanta `EModernRTTIError` quando o `FToken` tem `Kind` diferente
+    ///   de `tkEnumeration` (ou e `nil`).
+    /// </remarks>
+    function Name: string;
+    /// <summary>
+    ///   Ordinal do primeiro valor do enum (ex.: 0 para `TDia`).
+    /// </summary>
+    /// <remarks>
+    ///   Levanta `EModernRTTIError` quando o `FToken` tem `Kind` diferente
+    ///   de `tkEnumeration`.
+    /// </remarks>
+    function MinValue: Integer;
+    /// <summary>
+    ///   Ordinal do ultimo valor do enum (ex.: 6 para `TDia`).
+    /// </summary>
+    /// <remarks>
+    ///   Levanta `EModernRTTIError` quando o `FToken` tem `Kind` diferente
+    ///   de `tkEnumeration`.
+    /// </remarks>
+    function MaxValue: Integer;
+    /// <summary>
+    ///   Nome do valor do enum de ordinal `AOrdinal`.
+    /// </summary>
+    /// <remarks>
+    ///   Levanta `EModernRTTIError` quando `AOrdinal < MinValue` ou
+    ///   `AOrdinal > MaxValue` (D-43.3, M-1: `TypInfo.GetEnumName(P, -1)`
+    ///   no FPC 3.2.2 devolve o primeiro nome silenciosamente). Tambem
+    ///   levanta se o `FToken` tem `Kind` diferente de `tkEnumeration`.
+    /// </remarks>
+    function GetName(AOrdinal: Integer): string;
+    /// <summary>
+    ///   Ordinal do valor do enum cujo nome e `AName`.
+    /// </summary>
+    /// <remarks>
+    ///   Levanta `EModernRTTIError` quando o nome nao existe (D-43.4, M-2:
+    ///   `TypInfo.GetEnumValue` devolve `-1` — sentinela indistinguivel
+    ///   de resposta legitima em enums que pudessem ter ordinais
+    ///   negativos). Tambem levanta se o `FToken` tem `Kind` diferente de
+    ///   `tkEnumeration`.
+    /// </remarks>
+    function GetValue(const AName: string): Integer;
+    /// <summary>
+    ///   Nomes de todos os valores do enum, de `MinValue` a `MaxValue`,
+    ///   em ordem.
+    /// </summary>
+    /// <remarks>
+    ///   Levanta `EModernRTTIError` quando o `FToken` tem `Kind` diferente
+    ///   de `tkEnumeration`. Nao levanta por outra razao.
+    /// </remarks>
+    function GetNames: TArray<string>;
+  end;
+
   /// <summary>Entry point para leitura de RTTI portavel.</summary>
   /// <remarks>
   ///   Ownership: os handles devolvidos por GetType (e por chamadas em
@@ -955,6 +1044,46 @@ end;
 function TModernRTTIContext.FindType(const AQualifiedName: string): TModernRTTIType;
 begin
   Result := ContextFindType(FToken, AQualifiedName);
+end;
+
+{ TModernRTTIEnumerationType }
+
+class function TModernRTTIEnumerationType.FromTypeInfo(P: PTypeInfo): TModernRTTIEnumerationType;
+begin
+  // D-43.1 do ADR: fabrica NAO valida Kind — a guarda mora em cada metodo
+  // (D-4). Validar aqui obrigaria resourcestring nesta unit publica,
+  // violando D-1 (o motivo real; nao "economia").
+  Result.FToken := P;
+end;
+
+function TModernRTTIEnumerationType.Name: string;
+begin
+  Result := EnumName(FToken);
+end;
+
+function TModernRTTIEnumerationType.MinValue: Integer;
+begin
+  Result := EnumMinValue(FToken);
+end;
+
+function TModernRTTIEnumerationType.MaxValue: Integer;
+begin
+  Result := EnumMaxValue(FToken);
+end;
+
+function TModernRTTIEnumerationType.GetName(AOrdinal: Integer): string;
+begin
+  Result := EnumGetName(FToken, AOrdinal);
+end;
+
+function TModernRTTIEnumerationType.GetValue(const AName: string): Integer;
+begin
+  Result := EnumGetValue(FToken, AName);
+end;
+
+function TModernRTTIEnumerationType.GetNames: TArray<string>;
+begin
+  Result := EnumGetNames(FToken);
 end;
 
 { TModernRTTI }

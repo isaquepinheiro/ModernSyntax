@@ -129,6 +129,17 @@ type
     procedure TestMethod_Visibility_Delphi_Returns_mvPublished;
     [Test]
     procedure TestProperty_Visibility_Returns_mvPublished;
+
+    // issue #43 — TModernRTTIEnumerationType. Quatro cenarios compartilhados
+    // (paridade estrita com o FPC — mesmos nomes, mesmo Fail em quebra).
+    [Test]
+    procedure TestEnumerationType_NameAndBounds;
+    [Test]
+    procedure TestEnumerationType_GetNameGetValue;
+    [Test]
+    procedure TestEnumerationType_GetNames_LengthAndPresence;
+    [Test]
+    procedure TestEnumerationType_OutOfRangeAndUnknownRaises;
   end;
 
 implementation
@@ -294,6 +305,28 @@ end;
 procedure TTestModernRTTI.TestProperty_Visibility_Returns_mvPublished;
 begin
   Scenario_Property_Visibility_Returns_mvPublished;
+end;
+
+// --- Issue #43 ---------------------------------------------------------------
+
+procedure TTestModernRTTI.TestEnumerationType_NameAndBounds;
+begin
+  Scenario_EnumerationType_NameAndBounds;
+end;
+
+procedure TTestModernRTTI.TestEnumerationType_GetNameGetValue;
+begin
+  Scenario_EnumerationType_GetNameGetValue;
+end;
+
+procedure TTestModernRTTI.TestEnumerationType_GetNames_LengthAndPresence;
+begin
+  Scenario_EnumerationType_GetNames_LengthAndPresence;
+end;
+
+procedure TTestModernRTTI.TestEnumerationType_OutOfRangeAndUnknownRaises;
+begin
+  Scenario_EnumerationType_OutOfRangeAndUnknownRaises;
 end;
 
 initialization
