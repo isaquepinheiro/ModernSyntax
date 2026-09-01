@@ -93,7 +93,7 @@ function MethodLookup(AClass: TClass; const AName: string;
 function MethodIsConstructor(AOwner: TClass; AToken: Pointer): Boolean;
 function MethodIsClassMethod(AOwner: TClass; AToken: Pointer): Boolean;
 function MethodIsStatic(AOwner: TClass; AToken: Pointer): Boolean;
-function MethodVisibility(AOwner: TClass; AToken: Pointer): TMemberVisibility;
+function MethodVisibility(AOwner: TClass; AToken: Pointer): TModernVisibility;
 function MethodReturnType(AOwner: TClass; AToken: Pointer): TModernRTTIType;
 function MethodGetParameters(AOwner: TClass; AToken: Pointer):
   TArray<TModernRTTIParameter>;
@@ -104,6 +104,10 @@ function ParameterName(AOwner: TClass; const AName: string;
   ATypeToken: Pointer): string;
 function ParameterParamType(AOwner: TClass; ATypeToken: Pointer):
   TModernRTTIType;
+
+// --- Properties (issue #42) --------------------------------------------------
+
+function PropertyVisibility(AToken: Pointer): TModernVisibility;
 
 // --- Context (issue #28) -----------------------------------------------------
 
@@ -131,10 +135,23 @@ resourcestring
   SFPCNoStatic =
     'IsStatic: nao disponivel no FPC. vmtMethodTable (typinfo.pp:388-396) ' +
     'nao registra o modificador static — o dado nao existe.';
+  // D-42.5 do ADR issue #42: reescrita para expor a RAIZ verdadeira. O
+  // texto anterior ("visibilidade fina nao e enumeravel pela RTTI de
+  // classe") era falso — `TRttiMember.Visibility` existe em
+  // `rtti.pp:317` do FPC 3.2.2. O que nao a expoe e o CAMINHO
+  // escolhido: esta camada enumera metodos por `vmtMethodTable`
+  // (decisao da issue #25) e `TVmtMethodEntry` so carrega `Name` e
+  // `CodeAddress`. Trocar para `TRttiMethod` reintroduziria
+  // dependencia de `TRttiContext.GetType` e perderia a enumeracao por
+  // heranca que a #25 provou.
   SFPCNoVisibility =
-    'Visibility: nao disponivel no FPC. vmtMethodTable (typinfo.pp:388-396) ' +
-    'so registra membros published; visibilidade fina (private/protected/' +
-    'public) nao e enumeravel pela RTTI de classe.';
+    'Visibility: nao disponivel para metodos no FPC. TRttiMember.Visibility ' +
+    'existe em rtti.pp:317 do FPC 3.2.2, mas esta camada enumera metodos por ' +
+    'vmtMethodTable (decisao da issue #25) e TVmtMethodEntry so carrega Name ' +
+    'e CodeAddress. TRttiMethod fica fora do caminho escolhido — trocar para ' +
+    'ele reintroduziria dependencia de TRttiContext.GetType e perderia a ' +
+    'enumeracao por heranca. Para visibilidade de PROPRIEDADES use ' +
+    'TModernRTTIProperty.Visibility, que le TRttiProperty.Visibility direto.';
   SFPCNoReturnType =
     'ReturnType: nao disponivel no FPC. vmtMethodTable (typinfo.pp:388-396) ' +
     'carrega apenas Name e CodeAddress; tipo de retorno mora em ' +
@@ -353,9 +370,14 @@ begin
   raise EModernRTTIError.Create(SFPCNoStatic);
 end;
 
-function MethodVisibility(AOwner: TClass; AToken: Pointer): TMemberVisibility;
+function MethodVisibility(AOwner: TClass; AToken: Pointer): TModernVisibility;
 begin
-  Result := mvPublic;
+  // D-42.5 do ADR issue #42: continua levantando, mas a resourcestring
+  // reescrita expoe a raiz (vmtMethodTable + D-25) em vez de mentir
+  // "nao enumeravel pela RTTI". O `Result` default e apenas para
+  // silenciar o compilador sobre "parametro de saida nao inicializado"
+  // — o raise ocorre em seguida.
+  Result := TModernVisibility.mvPublic;
   raise EModernRTTIError.Create(SFPCNoVisibility);
 end;
 
@@ -386,6 +408,32 @@ function ParameterParamType(AOwner: TClass; ATypeToken: Pointer):
 begin
   Result := Default(TModernRTTIType);
   raise EModernRTTIError.Create(SFPCNoParamType);
+end;
+
+// --- Properties (issue #42) --------------------------------------------------
+
+function PropertyVisibility(AToken: Pointer): TModernVisibility;
+begin
+  // D-42.2 + D-42.4 do ADR issue #42: `case` explicito de EXATAMENTE 4
+  // ramos sobre `TRttiProperty(AToken).Visibility`. Dado real — NAO
+  // levanta. `TRttiProperty.Visibility` existe no FPC 3.2.2
+  // (`rtti.pp:340,3776`) e devolve `mvPublished` para propriedades
+  // declaradas em secao `published` de classe `{$M+}`.
+  //
+  // SEM ramo `mvAutomated` — esse identificador NAO existe em
+  // `TMemberVisibility` do FPC 3.2.2 (`rtti.pp:308`); inclui-lo nao
+  // compila. Os quatro ramos esgotam o enum; `else` levantando seria
+  // codigo morto.
+  //
+  // Case labels QUALIFICADOS com `TMemberVisibility.` (do Rtti/TypInfo),
+  // Result com `TModernVisibility.` (da casca), porque os dois enums
+  // declaram constantes homonimas — a mesma disciplina do backend Delphi.
+  case TRttiProperty(AToken).Visibility of
+    TMemberVisibility.mvPrivate:   Result := TModernVisibility.mvPrivate;
+    TMemberVisibility.mvProtected: Result := TModernVisibility.mvProtected;
+    TMemberVisibility.mvPublic:    Result := TModernVisibility.mvPublic;
+    TMemberVisibility.mvPublished: Result := TModernVisibility.mvPublished;
+  end;
 end;
 
 // --- Context (issue #28) -----------------------------------------------------

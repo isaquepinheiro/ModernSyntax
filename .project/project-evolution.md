@@ -23,6 +23,7 @@ correspondente e o ciclo ativo.
 | 011 | [#26](https://github.com/isaquepinheiro/ModernSyntax/issues/26) | TModernValue.AsType<T> portavel — TValueOps nos backends Delphi+FPC, reescrever GetValue<T>, 7 cenarios compartilhados + 1 published local FPC | 📤 PR aberto — [#39](https://github.com/isaquepinheiro/ModernSyntax/pull/39) |
 | 012 | [#27](https://github.com/isaquepinheiro/ModernSyntax/issues/27) | Enumerators nas colecoes: for..in sobre Fields, Properties, Methods, Parameters, Attributes — property alias sobre TArray<T> nos dois compiladores | 📤 PR aberto — [#40](https://github.com/isaquepinheiro/ModernSyntax/pull/40) |
 | 013 | [#28](https://github.com/isaquepinheiro/ModernSyntax/issues/28) | TModernRTTIContext com GetTypes e FindType nos dois compiladores — token opaco IInterface, registry per-instancia FPC, GetPackages fora com motivo, cinco cenarios compartilhados | 📤 PR aberto — [#41](https://github.com/isaquepinheiro/ModernSyntax/pull/41) |
+| 015 | [#42](https://github.com/isaquepinheiro/ModernSyntax/issues/42) | TModernVisibility publico; fechar vazamento em TModernRTTIMethod.Visibility; adicionar TModernRTTIProperty.Visibility — backends Delphi/FPC, tres cenarios, mutacao de sanidade | 📤 PR aberto — [#47](https://github.com/isaquepinheiro/ModernSyntax/pull/47) |
 
 ## Legenda
 
@@ -92,6 +93,19 @@ Demanda: adicionar quatro properties alias ao `TModernRTTITypeHelper` (`Fields`,
 importar `ModernSyntax.Attributes` na `uses` da `interface`; sete cenários compartilhados
 em `UScenarios.RTTI.pas`; seis published/[Test] em cada casca FPC e Delphi.
 Zero `{$IFDEF}` nos cenários (CA-5). Build FPC x86_64 e i386 obrigatório; autor confirma Delphi 12.
+
+**Ciclo 015** — MAESTRO MODE. A issue #42 é a demanda oficial deste ciclo
+(intake do maestro: `aefos:investigated`; re-entrada após plan-gate:on_reject
+no ciclo 014). Nenhuma issue ou Epic adicional criada. Demanda: declarar
+`TModernVisibility = (mvPrivate, mvProtected, mvPublic, mvPublished)` antes
+de `TModernRTTIField` na interface de `Source/ModernSyntax.RTTI.pas`; trocar
+tipo de retorno de `TModernRTTIMethod.Visibility`; adicionar
+`TModernRTTIProperty.Visibility`; backends Delphi (`case` explícito de 4
+ramos em `MethodVisibility` e novo `PropertyVisibility`) e FPC
+(`MethodVisibility` levanta com `SFPCNoVisibility` reescrita; `PropertyVisibility`
+com `case` de 4 ramos, sem `mvAutomated`, sem raise); três cenários em
+`UScenarios.RTTI.pas`; cascas FPC e Delphi atualizadas; mutação de sanidade
+obrigatória (`CA-9`). Build FPC 3.2.2 x86_64 e i386 obrigatório.
 
 **Ciclo 011** — MAESTRO MODE. A issue #26 é a demanda oficial deste ciclo
 (intake do maestro: `aefos:running`). Nenhuma issue ou Epic adicional criada.
