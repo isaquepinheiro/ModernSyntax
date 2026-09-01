@@ -639,6 +639,46 @@ type
     function GetNames: TArray<string>;
   end;
 
+  /// <summary>
+  ///   Handle leve para um `TypeInfo` de `Kind = tkPointer` (issue #44).
+  /// </summary>
+  /// <remarks>
+  ///   Padrao consagrado da familia (`TModernRTTIEnumerationType` da issue
+  ///   #43): `strict private FToken: PTypeInfo`, `FromTypeInfo` sem
+  ///   guarda de `Kind` (D-1 / D-44.1 — a guarda vive nos backends via
+  ///   D-4), `ReferredType` publico que delega ao backend selecionado
+  ///   pelo unico `{$IFDEF}` da unit.
+  /// </remarks>
+  TModernRTTIPointerType = record
+  strict private
+    FToken: PTypeInfo;
+  public
+    /// <summary>
+    ///   Constroi o handle a partir de `PTypeInfo`. Nao valida `Kind`
+    ///   (D-44.1): a fabrica na unit publica nao pode carregar
+    ///   `resourcestring` (D-1). A guarda por `Kind` vive em cada
+    ///   metodo, via backend.
+    /// </summary>
+    class function FromTypeInfo(P: PTypeInfo): TModernRTTIPointerType; static;
+    /// <summary>
+    ///   Devolve o `TModernRTTIType` do tipo apontado (o "referred" de
+    ///   um `^T`). Para `PTypeInfo` de `Pointer` puro (sem tipo
+    ///   apontado) devolve um `TModernRTTIType` com `IsNil = True` sem
+    ///   levantar (B-44.1).
+    /// </summary>
+    /// <remarks>
+    ///   Levanta `EModernRTTIError` quando o `FToken` tem `Kind`
+    ///   diferente de `tkPointer` (D-4).
+    ///
+    ///   Divergencia cross-compiler de `Name` (B-44.2): Delphi diz
+    ///   `Integer`, FPC diz `LongInt`. Consumidor que afirmar sobre
+    ///   `Name` deve indireta pela RTL local, ex.:
+    ///   `TModernRTTI.GetType(TypeInfo(Integer)).Name`. Esta camada
+    ///   **nao normaliza** — a RTL de cada compilador manda.
+    /// </remarks>
+    function ReferredType: TModernRTTIType;
+  end;
+
   /// <summary>Entry point para leitura de RTTI portavel.</summary>
   /// <remarks>
   ///   Ownership: os handles devolvidos por GetType (e por chamadas em
@@ -1084,6 +1124,21 @@ end;
 function TModernRTTIEnumerationType.GetNames: TArray<string>;
 begin
   Result := EnumGetNames(FToken);
+end;
+
+{ TModernRTTIPointerType }
+
+class function TModernRTTIPointerType.FromTypeInfo(P: PTypeInfo): TModernRTTIPointerType;
+begin
+  // D-44.1 do ADR: fabrica NAO valida Kind — a guarda mora no metodo
+  // (D-4), no backend. Validar aqui obrigaria resourcestring nesta unit
+  // publica, violando D-1. Mesmo padrao de TModernRTTIEnumerationType.
+  Result.FToken := P;
+end;
+
+function TModernRTTIPointerType.ReferredType: TModernRTTIType;
+begin
+  Result := PointerTypeReferredType(FToken);
 end;
 
 { TModernRTTI }

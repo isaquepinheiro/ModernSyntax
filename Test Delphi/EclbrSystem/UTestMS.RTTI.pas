@@ -140,6 +140,13 @@ type
     procedure TestEnumerationType_GetNames_LengthAndPresence;
     [Test]
     procedure TestEnumerationType_OutOfRangeAndUnknownRaises;
+
+    // issue #44 — TModernRTTIPointerType. Duas cascas [Test] delegando
+    // ao cenario compartilhado (padrao "um cenario, duas cascas").
+    [Test]
+    procedure TestPointerType_ReferredType_Matches;
+    [Test]
+    procedure TestPointerType_ReferredType_Nil_ForBarePointer;
   end;
 
 implementation
@@ -327,6 +334,18 @@ end;
 procedure TTestModernRTTI.TestEnumerationType_OutOfRangeAndUnknownRaises;
 begin
   Scenario_EnumerationType_OutOfRangeAndUnknownRaises;
+end;
+
+// --- Issue #44 ---------------------------------------------------------------
+
+procedure TTestModernRTTI.TestPointerType_ReferredType_Matches;
+begin
+  Scenario_PointerType_ReferredType_Matches;
+end;
+
+procedure TTestModernRTTI.TestPointerType_ReferredType_Nil_ForBarePointer;
+begin
+  Scenario_PointerType_ReferredType_Nil_ForBarePointer;
 end;
 
 initialization

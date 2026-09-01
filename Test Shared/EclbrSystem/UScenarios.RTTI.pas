@@ -191,6 +191,12 @@ type
   end;
 {$M-}
 
+  // Fixture para issue #44 (rename de PInteger para eliminar colisao com
+  // System.PInteger/SysUtils.PInteger no Delphi e com a RTL do FPC). O
+  // sufixo "44" carrega a origem. Padrao de fixture cross-compiler
+  // (secao `type` do interface) herdado de TCor/TDia (issue #43).
+  PInt44 = ^Integer;
+
 procedure Scenario_GetProperties_ReturnsPublishedProps;
 procedure Scenario_GetValue_Integer_Roundtrip;
 procedure Scenario_GetValue_String_Roundtrip;
@@ -244,6 +250,15 @@ procedure Scenario_EnumerationType_NameAndBounds;
 procedure Scenario_EnumerationType_GetNameGetValue;
 procedure Scenario_EnumerationType_GetNames_LengthAndPresence;
 procedure Scenario_EnumerationType_OutOfRangeAndUnknownRaises;
+// Cenarios da issue #44 — TModernRTTIPointerType. Dois cenarios
+// compartilhados (padrao "um cenario, duas cascas" da #25): Matches
+// exercita o caminho positivo com a fixture PInt44 (asserção de Name
+// via TModernRTTI.GetType(TypeInfo(Integer)).Name para absorver a
+// divergencia Delphi/FPC — B-44.2/D-44.7); Nil_ForBarePointer exercita
+// TypeInfo(Pointer) puro afirmando APENAS IsNil = True (D-44.6:
+// tocar .Name aqui AV por RTTI.pas:846, issue #49 registra).
+procedure Scenario_PointerType_ReferredType_Matches;
+procedure Scenario_PointerType_ReferredType_Nil_ForBarePointer;
 
 implementation
 
@@ -1140,6 +1155,50 @@ begin
   end;
   if not LRaised then
     Fail('GetValue(''naoExiste'') nao levantou EModernRTTIError (M-2: guard de -1 quebrado)');
+end;
+
+// --- Issue #44 — TModernRTTIPointerType --------------------------------------
+
+procedure Scenario_PointerType_ReferredType_Matches;
+var
+  LType: TModernRTTIPointerType;
+  LReferred: TModernRTTIType;
+begin
+  // MUTACAO OBRIGATORIA (issue #44 / D-44.3): se o backend FPC trocar
+  // `GetTypeData(P)^.RefType` por `PTypeInfo(GetTypeData(P)^.RefTypeRef)`,
+  // este cenario vermelha por semantica (le regiao errada; delta ~24
+  // bytes em x86_64 conforme relatorio §A-3). NAO por erro de compile
+  // — o cast e obrigatorio para que a mutacao rode.
+  //
+  // Nota cross-compiler (B-44.2 / D-44.7): Delphi diz 'Integer', FPC
+  // diz 'LongInt'. A asserção compara contra
+  // TModernRTTI.GetType(TypeInfo(Integer)).Name, que a propria RTL do
+  // compilador em uso absorve — literal `'Integer'`/`'LongInt'` quebra
+  // no outro lado. CA-5 preservado (zero {$IFDEF FPC} neste arquivo).
+  LType := TModernRTTIPointerType.FromTypeInfo(TypeInfo(PInt44));
+  LReferred := LType.ReferredType;
+  if LReferred.IsNil then
+    Fail('ReferredType(PInt44).IsNil deveria ser False.');
+  if LReferred.Name <> TModernRTTI.GetType(TypeInfo(Integer)).Name then
+    Fail('ReferredType(PInt44).Name deveria coincidir com Integer.Name da RTL local.');
+end;
+
+procedure Scenario_PointerType_ReferredType_Nil_ForBarePointer;
+var
+  LType: TModernRTTIPointerType;
+  LReferred: TModernRTTIType;
+begin
+  // ATENCAO (D-44.6 / R-4): NAO tocar em LReferred.Name aqui —
+  // ModernSyntax.RTTI.pas:846 faz `Result := FType.Name;` sem guarda e
+  // AVs sobre handle nil. Issue #49 registra o bug do .Name sobre nil
+  // e o mantem fora deste ciclo. Neste cenario afirma-se EXCLUSIVAMENTE
+  // IsNil = True — o observavel que a familia tkPointer com `Pointer`
+  // puro produz por construcao (RefType = nil no FPC; ReferredType =
+  // nil no Delphi; medido nos 4 alvos cada).
+  LType := TModernRTTIPointerType.FromTypeInfo(TypeInfo(Pointer));
+  LReferred := LType.ReferredType;
+  if not LReferred.IsNil then
+    Fail('ReferredType(Pointer) deveria ter IsNil = True.');
 end;
 
 end.

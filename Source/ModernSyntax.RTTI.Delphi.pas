@@ -96,6 +96,10 @@ function EnumGetName(P: PTypeInfo; AOrdinal: Integer): string;
 function EnumGetValue(P: PTypeInfo; const AName: string): Integer;
 function EnumGetNames(P: PTypeInfo): TArray<string>;
 
+// --- Pointer (issue #44) -----------------------------------------------------
+
+function PointerTypeReferredType(P: PTypeInfo): TModernRTTIType;
+
 // --- Context (issue #28) -----------------------------------------------------
 
 function ContextCreate: IModernRTTIContextToken;
@@ -117,6 +121,11 @@ resourcestring
     'TModernRTTIEnumerationType(%s).GetName(%d): ordinal fora de [MinValue..MaxValue].';
   SEnumNameUnknown =
     'TModernRTTIEnumerationType(%s).GetValue(''%s''): nome desconhecido.';
+  // Issue #44 — D-44.2 do ADR. resourcestring local no backend (padrao
+  // vigente do repo, D-1). Mesmo texto do backend FPC — o contrato de
+  // erros e identico por construcao (D-2/D-44.4).
+  SPointerWrongKind =
+    'TModernRTTIPointerType: TypeInfo does not describe a pointer type (Kind <> tkPointer).';
 
 // --- TValueOps ---------------------------------------------------------------
 
@@ -439,6 +448,33 @@ begin
     SetLength(Result, LMax - LMin + 1);
     for LI := LMin to LMax do
       Result[LI - LMin] := TypInfo.GetEnumName(P, LI);
+  finally
+    LCtx.Free;
+  end;
+end;
+
+// --- Pointer (issue #44) -----------------------------------------------------
+
+function PointerTypeReferredType(P: PTypeInfo): TModernRTTIType;
+var
+  LCtx: TRttiContext;
+begin
+  // D-4/D-44.4: paridade estrita com FPC. Guarda por Kind aberta antes
+  // de qualquer delegacao. SEM `is TRttiPointerType` (medicao nos 4
+  // alvos: LCtx.GetType(TypeInfo(Pointer)) sempre devolve
+  // TRttiPointerType, nunca nil, nunca levanta). SEM try/except extra:
+  // TRttiPointerType(...).ReferredType para `Pointer` puro retorna nil
+  // sem AV, caindo em IsNil = True (B-44.1).
+  if (P = nil) or (P^.Kind <> tkPointer) then
+    raise EModernRTTIError.Create(SPointerWrongKind);
+  LCtx := TRttiContext.Create;
+  try
+    // MUTACAO OBRIGATORIA (issue #44 / D-44.3): a mutacao real vive no
+    // backend FPC (property `RefType` vs raw `RefTypeRef` com cast).
+    // Comentario aqui documenta simetria — nao ha equivalente Delphi
+    // porque TRttiPointerType.ReferredType e API tipada, sem
+    // "campo bruto" analogo.
+    Result := TModernRTTIType.FromRtti(TRttiPointerType(LCtx.GetType(P)).ReferredType);
   finally
     LCtx.Free;
   end;

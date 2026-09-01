@@ -118,6 +118,10 @@ function EnumGetName(P: PTypeInfo; AOrdinal: Integer): string;
 function EnumGetValue(P: PTypeInfo; const AName: string): Integer;
 function EnumGetNames(P: PTypeInfo): TArray<string>;
 
+// --- Pointer (issue #44) -----------------------------------------------------
+
+function PointerTypeReferredType(P: PTypeInfo): TModernRTTIType;
+
 // --- Context (issue #28) -----------------------------------------------------
 
 function ContextCreate: IModernRTTIContextToken;
@@ -198,6 +202,11 @@ resourcestring
     'TModernRTTIEnumerationType(%s).GetName(%d): ordinal fora de [MinValue..MaxValue].';
   SEnumNameUnknown =
     'TModernRTTIEnumerationType(%s).GetValue(''%s''): nome desconhecido.';
+  // Issue #44 — D-44.2/D-44.3 do ADR. resourcestring vive no backend
+  // (D-1) para nao vazar para a unit publica. Guarda em
+  // PointerTypeReferredType (D-4). Mesma mensagem no backend Delphi.
+  SPointerWrongKind =
+    'TModernRTTIPointerType: TypeInfo does not describe a pointer type (Kind <> tkPointer).';
 
 // --- TValueOps ---------------------------------------------------------------
 
@@ -545,6 +554,35 @@ begin
   SetLength(Result, LMax - LMin + 1);
   for LI := LMin to LMax do
     Result[LI - LMin] := TypInfo.GetEnumName(P, LI);
+end;
+
+// --- Pointer (issue #44) -----------------------------------------------------
+
+function PointerTypeReferredType(P: PTypeInfo): TModernRTTIType;
+var
+  LCtx: TRttiContext;
+begin
+  // D-4/D-44.2: guarda por Kind aberta em cada funcao. Mensagem
+  // consistente com o backend Delphi (D-44.2/D-2).
+  if (P = nil) or (P^.Kind <> tkPointer) then
+    raise EModernRTTIError.Create(SPointerWrongKind);
+  LCtx := TRttiContext.Create;
+  // MUTACAO OBRIGATORIA (issue #44 / D-44.3): trocar `RefType` por
+  //   PTypeInfo(GetTypeData(P)^.RefTypeRef)
+  // deixa Scenario_PointerType_ReferredType_Matches vermelho por
+  // semantica. A property `RefType` (typinfo.pp:563) faz
+  // `DerefTypeInfoPtr(RefTypeRef)` (typinfo.pp:3306). Usar
+  // `RefTypeRef` (que e PPTypeInfo) com cast para PTypeInfo le a
+  // regiao errada — delta 24 bytes em x86_64 medido no relatorio.
+  // A forma literal SEM cast nao compila; o cast e obrigatorio para
+  // que a mutacao seja "vermelho por semantica" e nao "erro de
+  // compile" (regra de teste "cenario vermelho, nao erro de compile").
+  //
+  // Sem try/finally .Free — no FPC 3.2.2, TRttiContext e record por
+  // valor (D-44.5 / R-5). Sem try/except — para PTypeInfo(Pointer) puro,
+  // GetTypeData(P)^.RefType e nil e LCtx.GetType(nil) retorna nil,
+  // caindo em TModernRTTIType.IsNil = True sem levantar.
+  Result := TModernRTTIType.FromRtti(LCtx.GetType(GetTypeData(P)^.RefType));
 end;
 
 // --- Context (issue #28) -----------------------------------------------------
