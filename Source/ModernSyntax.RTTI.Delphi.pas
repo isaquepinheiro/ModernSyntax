@@ -71,7 +71,7 @@ function MethodLookup(AClass: TClass; const AName: string;
 function MethodIsConstructor(AOwner: TClass; AToken: Pointer): Boolean;
 function MethodIsClassMethod(AOwner: TClass; AToken: Pointer): Boolean;
 function MethodIsStatic(AOwner: TClass; AToken: Pointer): Boolean;
-function MethodVisibility(AOwner: TClass; AToken: Pointer): TMemberVisibility;
+function MethodVisibility(AOwner: TClass; AToken: Pointer): TModernVisibility;
 function MethodReturnType(AOwner: TClass; AToken: Pointer): TModernRTTIType;
 function MethodGetParameters(AOwner: TClass; AToken: Pointer):
   TArray<TModernRTTIParameter>;
@@ -82,6 +82,10 @@ function ParameterName(AOwner: TClass; const AName: string;
   ATypeToken: Pointer): string;
 function ParameterParamType(AOwner: TClass; ATypeToken: Pointer):
   TModernRTTIType;
+
+// --- Properties (issue #42) --------------------------------------------------
+
+function PropertyVisibility(AToken: Pointer): TModernVisibility;
 
 // --- Context (issue #28) -----------------------------------------------------
 
@@ -233,9 +237,40 @@ begin
   Result := TRttiMethod(AToken).IsStatic;
 end;
 
-function MethodVisibility(AOwner: TClass; AToken: Pointer): TMemberVisibility;
+function MethodVisibility(AOwner: TClass; AToken: Pointer): TModernVisibility;
 begin
-  Result := TRttiMethod(AToken).Visibility;
+  // D-42.2 do ADR issue #42: `case` explicito de EXATAMENTE 4 ramos
+  // (`mvPrivate`, `mvProtected`, `mvPublic`, `mvPublished`). SEM ramo
+  // `mvAutomated` (opcao (b) do revisor — D-42.3): se o
+  // `TMemberVisibility` do Delphi tiver esse ou qualquer outro valor
+  // adicional, o compilador acusa erro no primeiro build. Nunca
+  // `TModernVisibility(Ord(...))` — silencia valor novo em runtime.
+  //
+  // Case labels QUALIFICADOS com `TMemberVisibility.` (do RTL), Result
+  // com `TModernVisibility.` (da casca), porque os dois enums declaram
+  // constantes homonimas — depender de shadowing por ordem de `uses`
+  // seria fragil.
+  case TRttiMethod(AToken).Visibility of
+    TMemberVisibility.mvPrivate:   Result := TModernVisibility.mvPrivate;
+    TMemberVisibility.mvProtected: Result := TModernVisibility.mvProtected;
+    TMemberVisibility.mvPublic:    Result := TModernVisibility.mvPublic;
+    TMemberVisibility.mvPublished: Result := TModernVisibility.mvPublished;
+  end;
+end;
+
+function PropertyVisibility(AToken: Pointer): TModernVisibility;
+begin
+  // D-42.2 + D-42.4 do ADR issue #42: mesmo `case` de 4 ramos sobre
+  // `TRttiProperty.Visibility`, dado real nos dois compiladores.
+  // `TRttiProperty` e auto-contido — parametro unico (AToken); simetria
+  // formal com `MethodVisibility(AOwner, AToken)` seria ruido (AOwner
+  // ficaria morto). D-42.6 do ADR.
+  case TRttiProperty(AToken).Visibility of
+    TMemberVisibility.mvPrivate:   Result := TModernVisibility.mvPrivate;
+    TMemberVisibility.mvProtected: Result := TModernVisibility.mvProtected;
+    TMemberVisibility.mvPublic:    Result := TModernVisibility.mvPublic;
+    TMemberVisibility.mvPublished: Result := TModernVisibility.mvPublished;
+  end;
 end;
 
 function MethodReturnType(AOwner: TClass; AToken: Pointer): TModernRTTIType;

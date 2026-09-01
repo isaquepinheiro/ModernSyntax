@@ -215,6 +215,13 @@ procedure Scenario_Context_GetTypes_AfterTwoRegisterType_ContainsBoth;
 procedure Scenario_Context_FindType_Class_Found;
 procedure Scenario_Context_FindType_NotFound_ReturnsNil;
 procedure Scenario_Context_CopyByValue_SharesState_NoUseAfterFree;
+// Cenarios da issue #42 — TModernVisibility. Par distinto para Method
+// (FPC-only levanta / Delphi-only devolve mvPublished) + um cenario
+// cross-compiler para Property (dado real nos dois lados). Padrao "dois
+// cenarios distintos + duas cascas" da #25 governa APENAS o par de Method.
+procedure Scenario_Method_Visibility_FPC_Raises;
+procedure Scenario_Method_Visibility_Delphi_Returns_mvPublished;
+procedure Scenario_Property_Visibility_Returns_mvPublished;
 
 implementation
 
@@ -910,6 +917,83 @@ begin
   if LSecondRaised then
     Fail('(d) B.Free posterior levantou — regressao do desenho Pointer ' +
       '(double-free). D-28.10 do ADR silenciada.');
+end;
+
+// --- Issue #42 — TModernVisibility -------------------------------------------
+
+procedure Scenario_Method_Visibility_FPC_Raises;
+var
+  LMethod: TModernRTTIMethod;
+  LRaised: Boolean;
+  LMsg: string;
+begin
+  // R2 do ESP: no FPC, `TModernRTTIMethod.Visibility` levanta
+  // `EModernRTTIError` porque esta camada enumera por vmtMethodTable
+  // (D-25) — nao por ausencia da RTL (D-42.5). Cenario publicado APENAS
+  // na casca FPC (padrao "dois cenarios distintos + duas cascas").
+  // Fixture: reusa TMethodBase (published Alpha), ja declarada acima.
+  LMethod := TModernRTTI.GetType(TMethodBase).GetMethod('Alpha');
+  LRaised := False;
+  LMsg := '';
+  try
+    LMethod.Visibility;
+  except
+    on E: EModernRTTIError do
+    begin
+      LRaised := True;
+      LMsg := E.Message;
+    end;
+  end;
+  if not LRaised then
+    Fail('esperava EModernRTTIError ao chamar Method.Visibility no FPC ' +
+      '(D-42.5) e nada foi levantado');
+  // A mensagem reescrita (D-42.5) menciona vmtMethodTable — sinaliza a
+  // raiz real (nao a falsa "nao enumeravel pela RTTI de classe").
+  if Pos('vmtMethodTable', LMsg) = 0 then
+    Fail(Format('EModernRTTIError sem mencao a vmtMethodTable (raiz do D-25): "%s"',
+      [LMsg]));
+end;
+
+procedure Scenario_Method_Visibility_Delphi_Returns_mvPublished;
+var
+  LMethod: TModernRTTIMethod;
+  LVis: TModernVisibility;
+begin
+  // R2 do ESP: no Delphi, `TModernRTTIMethod.Visibility` devolve dado real
+  // via `case` explicito de 4 ramos (D-42.2). Cenario publicado APENAS
+  // na casca Delphi. TMethodBase.Alpha e `published` → mvPublished.
+  LMethod := TModernRTTI.GetType(TMethodBase).GetMethod('Alpha');
+  LVis := LMethod.Visibility;
+  if LVis <> TModernVisibility.mvPublished then
+    Fail(Format('Method.Visibility devolveu ordinal %d; esperado %d (mvPublished)',
+      [Ord(LVis), Ord(TModernVisibility.mvPublished)]));
+end;
+
+procedure Scenario_Property_Visibility_Returns_mvPublished;
+var
+  LProps: TArray<TModernRTTIProperty>;
+  LProp: TModernRTTIProperty;
+  LVis: TModernVisibility;
+begin
+  // R3 do ESP + D-42.4 do ADR: cross-compiler — devolve dado real nos
+  // dois compiladores. `TRttiProperty.Visibility` existe no Delphi e no
+  // FPC 3.2.2 (`rtti.pp:340,3776`).
+  //
+  // Fixture: reusa TPortableFixture, ja declarada com `{$M+}` e
+  // propriedade `Number` published (satisfaz o requisito de "ao menos
+  // uma propriedade published em classe {$M+}").
+  //
+  // MUTACAO OBRIGATORIA (D-42.9 / CA-9): trocar em qualquer backend
+  // (Delphi ou FPC) a linha `mvPublished: Result := mvPublished;` do
+  // `case` de `PropertyVisibility` por `Result := mvPrivate;` deve
+  // tornar este cenario vermelho. Sem essa validacao o cenario nao paga
+  // por si (pode passar por caminho errado — fixture sem published).
+  LProps := TModernRTTI.GetType(TPortableFixture).GetProperties;
+  LProp := GetPropByName(LProps, 'Number');
+  LVis := LProp.Visibility;
+  if LVis <> TModernVisibility.mvPublished then
+    Fail(Format('Property.Visibility devolveu ordinal %d; esperado %d (mvPublished)',
+      [Ord(LVis), Ord(TModernVisibility.mvPublished)]));
 end;
 
 end.

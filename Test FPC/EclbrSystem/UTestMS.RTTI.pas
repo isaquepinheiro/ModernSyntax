@@ -71,6 +71,12 @@ type
     procedure TestContext_FindType_Class_Found;
     procedure TestContext_FindType_NotFound_ReturnsNil;
     procedure TestContext_CopyByValue_SharesState_NoUseAfterFree;
+    // issue #42 — TModernVisibility. Method_Visibility_FPC_Raises e o par
+    // FPC-only (D-42.5); o irmao Method_Visibility_Delphi_Returns_mvPublished
+    // NAO e publicado aqui — casca Delphi so. Property_Visibility_Returns_
+    // mvPublished e cross-compiler (D-42.7).
+    procedure TestMethod_Visibility_FPC_Raises;
+    procedure TestProperty_Visibility_Returns_mvPublished;
   end;
 
 implementation
@@ -254,6 +260,18 @@ end;
 procedure TTestModernRTTI.TestContext_CopyByValue_SharesState_NoUseAfterFree;
 begin
   Scenario_Context_CopyByValue_SharesState_NoUseAfterFree;
+end;
+
+// --- Issue #42 ---------------------------------------------------------------
+
+procedure TTestModernRTTI.TestMethod_Visibility_FPC_Raises;
+begin
+  Scenario_Method_Visibility_FPC_Raises;
+end;
+
+procedure TTestModernRTTI.TestProperty_Visibility_Returns_mvPublished;
+begin
+  Scenario_Property_Visibility_Returns_mvPublished;
 end;
 
 initialization

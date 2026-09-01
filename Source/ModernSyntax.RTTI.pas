@@ -56,6 +56,20 @@ type
   /// </summary>
   EModernRTTIError = class(Exception);
 
+  /// <summary>
+  ///   Enum publico proprio da casca de RTTI para expressar visibilidade de
+  ///   membros (issue #42). Substitui `TMemberVisibility` de `TypInfo` na
+  ///   superficie publica desta unit (D-42.1 do ADR issue #42) — a casca
+  ///   nao vaza tipos do RTL de cada compilador. Ordem espelha
+  ///   `TMemberVisibility` do Delphi/FPC: `mvPrivate < mvProtected <
+  ///   mvPublic < mvPublished`. Se `TMemberVisibility` de algum
+  ///   compilador vier a incluir valor adicional (ex.: `mvAutomated` no
+  ///   Delphi), o `case` explicito nos backends (D-42.2) acusa erro no
+  ///   primeiro build — nunca `TModernVisibility(Ord(...))`, que
+  ///   silenciaria em runtime.
+  /// </summary>
+  TModernVisibility = (mvPrivate, mvProtected, mvPublic, mvPublished);
+
   // Forward-declaracoes internas nao existem para records em Pascal; a ordem
   // abaixo respeita a dependencia estatica: Field/Property/Type precisam
   // preceder Method/Parameter, e Type precisa preceder Method (ReturnType) /
@@ -121,6 +135,21 @@ type
     function GetValue(const AInstance: TObject): TValue; overload;
     /// <summary>Overload cru sobre TValue (escape hatch — ver remarks do overload GetValue).</summary>
     procedure SetValue(const AInstance: TObject; const AValue: TValue); overload;
+    /// <summary>
+    ///   Visibilidade declarada da propriedade (issue #42). Devolve
+    ///   dado real nos DOIS compiladores — `TRttiProperty.Visibility`
+    ///   existe no Delphi e no FPC 3.2.2 (`rtti.pp:340,3776`) e devolve
+    ///   `mvPublished` para propriedades declaradas em secao
+    ///   `published` de classe com `{$M+}`.
+    /// </summary>
+    /// <remarks>
+    ///   Assimetria deliberada com `TModernRTTIMethod.Visibility` (que
+    ///   NO FPC levanta): aqui NAO ha raise no FPC. A visibilidade de
+    ///   propriedades esta no caminho da RTL nos dois lados, entao a
+    ///   casca devolve o valor mapeado por `case` explicito de 4 ramos
+    ///   (D-42.2 do ADR issue #42), sem depender de `Ord`.
+    /// </remarks>
+    function Visibility: TModernVisibility;
     // Construtor interno usado pela unit; nao faz parte da API publica.
     class function FromRtti(const AProp: TRttiProperty): TModernRTTIProperty; static;
   end;
@@ -273,10 +302,16 @@ type
     /// </summary>
     function IsStatic: Boolean;
     /// <summary>
-    ///   Visibilidade declarada do metodo. NO FPC levanta EModernRTTIError —
-    ///   vmtMethodTable so registra published.
+    ///   Visibilidade declarada do metodo. NO FPC levanta
+    ///   `EModernRTTIError` — nao pela ausencia da RTL
+    ///   (`TRttiMember.Visibility` existe em `rtti.pp:317`), mas
+    ///   porque esta camada enumera metodos por `vmtMethodTable`
+    ///   (D-25 do ADR issue #25) e `TVmtMethodEntry` so carrega
+    ///   `Name` e `CodeAddress`; `TRttiMethod` fica fora do caminho
+    ///   escolhido. Trocar para `TRttiMethod` perderia a enumeracao
+    ///   por heranca da #25 (D-42.5 do ADR issue #42).
     /// </summary>
-    function Visibility: TMemberVisibility;
+    function Visibility: TModernVisibility;
     /// <summary>
     ///   Parametros do metodo, expostos como coleção iteravel por `for..in`
     ///   (issue #27). Alias puro de `GetParameters` — a coleção subjacente
@@ -643,6 +678,16 @@ begin
   FProp.SetValue(AInstance, AValue);
 end;
 
+function TModernRTTIProperty.Visibility: TModernVisibility;
+begin
+  // Delega ao backend. Nos DOIS compiladores devolve dado real via
+  // `case` explicito de 4 ramos sobre `TRttiProperty(AToken).Visibility`
+  // (D-42.2 do ADR issue #42). `FProp` esta em `strict private` mas visivel
+  // na `implementation` da mesma unit — passamos como `Pointer(FProp)`
+  // para casar com a assinatura crua dos backends.
+  Result := PropertyVisibility(Pointer(FProp));
+end;
+
 { TModernRTTIField }
 
 class function TModernRTTIField.FromToken(AOwner: TClass; const AName: string;
@@ -863,7 +908,7 @@ begin
   Result := MethodIsStatic(FOwner, FToken);
 end;
 
-function TModernRTTIMethod.Visibility: TMemberVisibility;
+function TModernRTTIMethod.Visibility: TModernVisibility;
 begin
   Result := MethodVisibility(FOwner, FToken);
 end;

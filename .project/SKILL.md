@@ -167,3 +167,20 @@ fpc -Mdelphi \
     -FU/tmp/fpcbuild -FE/tmp/fpcbuild \
     "Test FPC/EclbrSystem/PTestAttributes.lpr"
 ```
+
+---
+
+## Complexity gate — lizard unavailable in factory container (agent-discovered 2026-09-01)
+
+Discovered in cycle 015 (issue #42 verify node). `lizard` is not installed in the
+Aefos factory container — `pip` is absent, so `pip install lizard` fails with
+`command not found`. The complexity gate runs as TOOL_MISSING.
+
+**Workaround for the factory:** since all backends in this project use explicit `case`
+statements over 4 values (by architectural rule R4 / D-42.2), CCN for any changed
+function is trivially ≤ 5. Manual assessment is sufficient.
+
+**To enable lizard in CI/local:** install Python 3 + pip, then `pip install lizard`.
+Run against changed files: `lizard --CCN 10 <files>`.
+
+Quality threshold (default): CCN max 10 per function. No project-specific override declared.
