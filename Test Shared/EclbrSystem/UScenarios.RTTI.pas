@@ -307,10 +307,18 @@ procedure Scenario_EnumerationType_OutOfRangeAndUnknownRaises;
 // exercita o caminho positivo com a fixture PInt44 (asserção de Name
 // via TModernRTTI.GetType(TypeInfo(Integer)).Name para absorver a
 // divergencia Delphi/FPC — B-44.2/D-44.7); Nil_ForBarePointer exercita
-// TypeInfo(Pointer) puro afirmando APENAS IsNil = True (D-44.6:
-// tocar .Name aqui AV por RTTI.pas:846, issue #49 registra).
+// TypeInfo(Pointer) puro afirmando IsNil = True e — apos #49 resolvida —
+// que LReferred.Name levanta EModernRTTIError (contrato de nil-handle).
 procedure Scenario_PointerType_ReferredType_Matches;
 procedure Scenario_PointerType_ReferredType_Nil_ForBarePointer;
+// Cenario da issue #49 — contrato de nil-handle em TModernRTTIType.
+// Um unico cenario compartilhado (padrao "um cenario, duas cascas" da
+// #25) que constroi o handle pelo caminho publico
+// (TModernRTTIContext.FindType de nome inexistente) e afirma
+// EModernRTTIError nos cinco membros afetados (Name, GetProperties,
+// GetFields, GetMethods, GetMethod). Cada bloco verifica que a mensagem
+// cita o nome do membro chamado (B-49.2 do ESP).
+procedure Scenario_NilHandle_AllMembers_Raises;
 // Cenario da issue #45 — TModernRTTIRecordType. UM unico cenario com
 // QUATRO assercões (Name+Size por fixture). Padrao "um cenario, duas
 // cascas" (D-7). Duas fixtures obrigatorias (D-45.4): uma so, com Size = 8
@@ -1255,18 +1263,32 @@ procedure Scenario_PointerType_ReferredType_Nil_ForBarePointer;
 var
   LType: TModernRTTIPointerType;
   LReferred: TModernRTTIType;
+  LRaised: Boolean;
 begin
-  // ATENCAO (D-44.6 / R-4): NAO tocar em LReferred.Name aqui —
-  // ModernSyntax.RTTI.pas:846 faz `Result := FType.Name;` sem guarda e
-  // AVs sobre handle nil. Issue #49 registra o bug do .Name sobre nil
-  // e o mantem fora deste ciclo. Neste cenario afirma-se EXCLUSIVAMENTE
-  // IsNil = True — o observavel que a familia tkPointer com `Pointer`
-  // puro produz por construcao (RefType = nil no FPC; ReferredType =
-  // nil no Delphi; medido nos 4 alvos cada).
+  // Divida D-44.6 / R-4 DESBLOQUEADA pela issue #49 (RESOLVIDA): com o
+  // contrato de nil-handle em vigor, `LReferred.Name` sobre um handle
+  // com IsNil = True levanta EModernRTTIError em vez de AV. Neste
+  // cenario afirmamos os DOIS observaveis: IsNil = True (por construcao
+  // — TypeInfo(Pointer) puro produz RefType = nil no FPC e
+  // ReferredType = nil no Delphi; medido nos 4 alvos cada) e
+  // .Name -> EModernRTTIError (contrato de nil-handle, ADR D-49.1).
   LType := TModernRTTIPointerType.FromTypeInfo(TypeInfo(Pointer));
   LReferred := LType.ReferredType;
   if not LReferred.IsNil then
     Fail('ReferredType(Pointer) deveria ter IsNil = True.');
+
+  // Contrato de nil-handle (issue #49 / ADR D-49.1): .Name sobre handle
+  // nil agora levanta EModernRTTIError em vez de AV.
+  LRaised := False;
+  try
+    LReferred.Name;
+  except
+    on EModernRTTIError do
+      LRaised := True;
+  end;
+  if not LRaised then
+    Fail('LReferred.Name sobre Pointer nil deveria levantar EModernRTTIError ' +
+      '(contrato de nil-handle da issue #49).');
 end;
 
 // --- Issue #45 — TModernRTTIRecordType ---------------------------------------
@@ -1398,6 +1420,118 @@ begin
   if LSet.ElementType.Name <> TModernRTTI.GetType(TypeInfo(TCor)).Name then
     Fail('ElementType(TSetCor46).Name != TCor.Name por referencia ' +
       '(Mutacao 2: CompType -> CompTypeRef le regiao errada).');
+end;
+
+// --- Issue #49 — contrato de nil-handle em TModernRTTIType -------------------
+
+procedure Scenario_NilHandle_AllMembers_Raises;
+var
+  LCtx: TModernRTTIContext;
+  LType: TModernRTTIType;
+  LRaised: Boolean;
+  LMsg: string;
+begin
+  // ADR D-49.1 + ESP B-49.1..B-49.6: sobre um handle com IsNil = True,
+  // os cinco membros afetados (Name, GetProperties, GetFields, GetMethods,
+  // GetMethod) levantam EModernRTTIError.CreateFmt(SModernRTTINilHandle,
+  // [<membro>]) — nao AV, nao vazio silencioso. O handle e construido pelo
+  // CAMINHO PUBLICO (B-49.6): TModernRTTIContext.FindType de um nome que
+  // ninguem registrou. Cada bloco verifica que a mensagem cita o nome do
+  // membro chamado (B-49.2).
+  LCtx := TModernRTTIContext.Create;
+  LType := LCtx.FindType('TipoQueNaoExiste_Issue49');
+  if not LType.IsNil then
+    Fail('FindType de nome inexistente deveria devolver IsNil = True ' +
+      '(pre-condicao do cenario).');
+
+  // Name
+  LRaised := False;
+  LMsg := '';
+  try
+    LType.Name;
+  except
+    on E: EModernRTTIError do
+    begin
+      LRaised := True;
+      LMsg := E.Message;
+    end;
+  end;
+  if not LRaised then
+    Fail('Name sobre handle nil nao levantou EModernRTTIError.');
+  if Pos('Name', LMsg) = 0 then
+    Fail(Format('Mensagem de Name nao cita o membro chamado: "%s"', [LMsg]));
+
+  // GetProperties
+  LRaised := False;
+  LMsg := '';
+  try
+    LType.GetProperties;
+  except
+    on E: EModernRTTIError do
+    begin
+      LRaised := True;
+      LMsg := E.Message;
+    end;
+  end;
+  if not LRaised then
+    Fail('GetProperties sobre handle nil nao levantou EModernRTTIError.');
+  if Pos('GetProperties', LMsg) = 0 then
+    Fail(Format('Mensagem de GetProperties nao cita o membro chamado: "%s"',
+      [LMsg]));
+
+  // GetFields
+  LRaised := False;
+  LMsg := '';
+  try
+    LType.GetFields;
+  except
+    on E: EModernRTTIError do
+    begin
+      LRaised := True;
+      LMsg := E.Message;
+    end;
+  end;
+  if not LRaised then
+    Fail('GetFields sobre handle nil nao levantou EModernRTTIError ' +
+      '(contrato de nil-handle deve preceder o is TRttiInstanceType check).');
+  if Pos('GetFields', LMsg) = 0 then
+    Fail(Format('Mensagem de GetFields nao cita o membro chamado: "%s"', [LMsg]));
+
+  // GetMethods
+  LRaised := False;
+  LMsg := '';
+  try
+    LType.GetMethods;
+  except
+    on E: EModernRTTIError do
+    begin
+      LRaised := True;
+      LMsg := E.Message;
+    end;
+  end;
+  if not LRaised then
+    Fail('GetMethods sobre handle nil nao levantou EModernRTTIError.');
+  if Pos('GetMethods', LMsg) = 0 then
+    Fail(Format('Mensagem de GetMethods nao cita o membro chamado: "%s"',
+      [LMsg]));
+
+  // GetMethod (singular) — quinto membro (ADR D-49.2)
+  LRaised := False;
+  LMsg := '';
+  try
+    LType.GetMethod('AnyName');
+  except
+    on E: EModernRTTIError do
+    begin
+      LRaised := True;
+      LMsg := E.Message;
+    end;
+  end;
+  if not LRaised then
+    Fail('GetMethod sobre handle nil nao levantou EModernRTTIError.');
+  if Pos('GetMethod', LMsg) = 0 then
+    Fail(Format('Mensagem de GetMethod nao cita o membro chamado: "%s"',
+      [LMsg]));
 end;
 
 end.

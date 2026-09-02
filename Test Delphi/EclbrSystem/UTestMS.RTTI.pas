@@ -165,6 +165,12 @@ type
     procedure TestArrayType_Dynamic_Managed_ElementType;
     [Test]
     procedure TestSetType_ElementType;
+
+    // issue #49 — contrato de nil-handle em TModernRTTIType. UMA [Test]
+    // (D-7 "um cenario, duas cascas") delegando ao cenario compartilhado;
+    // internamente afirma EModernRTTIError nos cinco membros afetados.
+    [Test]
+    procedure TestNilHandle_AllMembers_Raises;
   end;
 
 implementation
@@ -393,6 +399,13 @@ end;
 procedure TTestModernRTTI.TestSetType_ElementType;
 begin
   Scenario_SetType_ElementType;
+end;
+
+// --- Issue #49 ---------------------------------------------------------------
+
+procedure TTestModernRTTI.TestNilHandle_AllMembers_Raises;
+begin
+  Scenario_NilHandle_AllMembers_Raises;
 end;
 
 initialization

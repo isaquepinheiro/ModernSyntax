@@ -173,6 +173,10 @@ type
     FType: TRttiType;
   public
     /// <summary>Nome qualificado do tipo (ex.: "TMinhaClasse").</summary>
+    /// <remarks>
+    ///   Quando <c>IsNil = True</c>, levanta <c>EModernRTTIError</c>;
+    ///   verifique <c>IsNil</c> antes de chamar.
+    /// </remarks>
     function Name: string;
     /// <summary>
     ///   Devolve as propriedades publicadas do tipo.
@@ -189,6 +193,9 @@ type
     ///   real de propriedades public/published; no FPC: falta de {$M+} antes
     ///   da declaracao da classe), esta funcao levanta EModernRTTIError com
     ///   mensagem instrutiva. Nunca devolve lista vazia silenciosa.
+    ///
+    ///   Quando <c>IsNil = True</c>, levanta <c>EModernRTTIError</c>;
+    ///   verifique <c>IsNil</c> antes de chamar.
     /// </remarks>
     function GetProperties: TArray<TModernRTTIProperty>;
     /// <summary>Devolve os campos de instancia do tipo, incluindo herdados.</summary>
@@ -201,6 +208,11 @@ type
     ///
     ///   A ordem dos elementos NAO e especificada — consumidores devem
     ///   buscar por nome, nao indexar por posicao.
+    ///
+    ///   Quando <c>IsNil = True</c>, levanta <c>EModernRTTIError</c>;
+    ///   verifique <c>IsNil</c> antes de chamar. (Handles validos de tipos
+    ///   nao-classe — records, enums — continuam devolvendo <c>nil</c>
+    ///   silenciosamente; o contrato de nil-handle nao se aplica a eles.)
     /// </remarks>
     function GetFields: TArray<TModernRTTIField>;
     class function FromRtti(const AType: TRttiType): TModernRTTIType; static;
@@ -369,6 +381,9 @@ type
     ///   Elos sem vMethodTable sao pulados, nao erram.
     ///
     ///   Ordem NAO e especificada — busque por nome.
+    ///
+    ///   Quando <c>IsNil = True</c>, levanta <c>EModernRTTIError</c>;
+    ///   verifique <c>IsNil</c> antes de chamar.
     /// </remarks>
     function GetMethods: TArray<TModernRTTIMethod>;
     /// <summary>Localiza um metodo por nome (issue #25).</summary>
@@ -376,6 +391,9 @@ type
     ///   No FPC usa TObject.MethodAddress, que sobe a cadeia de heranca
     ///   por conta propria (D-25.3 do ADR). Se nao encontrar, levanta
     ///   EModernRTTIError com mensagem que menciona a classe e o nome.
+    ///
+    ///   Quando <c>IsNil = True</c>, levanta <c>EModernRTTIError</c>;
+    ///   verifique <c>IsNil</c> antes de chamar.
     /// </remarks>
     function GetMethod(const AName: string): TModernRTTIMethod;
     /// <summary>
@@ -871,6 +889,8 @@ resourcestring
     'GetMethods so opera sobre tipo classe; %s nao e TRttiInstanceType.';
   SModernRTTIGetMethodNotClass =
     'GetMethod so opera sobre tipo classe; %s nao e TRttiInstanceType.';
+  SModernRTTINilHandle =
+    'handle nao inicializado (IsNil = True). Verifique IsNil antes de chamar %s.';
 
 { TModernValue }
 
@@ -1020,6 +1040,8 @@ end;
 
 function TModernRTTIType.Name: string;
 begin
+  if FType = nil then
+    raise EModernRTTIError.CreateFmt(SModernRTTINilHandle, ['Name']);
   Result := FType.Name;
 end;
 
@@ -1030,6 +1052,8 @@ var
   LIdx: Integer;
   LHasPublishedProps: Boolean;
 begin
+  if FType = nil then
+    raise EModernRTTIError.CreateFmt(SModernRTTINilHandle, ['GetProperties']);
   LProps := FType.GetProperties;
   if (Length(LProps) = 0) and (FType is TRttiInstanceType) then
   begin
@@ -1050,6 +1074,8 @@ end;
 
 function TModernRTTIType.GetFields: TArray<TModernRTTIField>;
 begin
+  if FType = nil then
+    raise EModernRTTIError.CreateFmt(SModernRTTINilHandle, ['GetFields']);
   if not (FType is TRttiInstanceType) then
   begin
     Result := nil;
@@ -1064,6 +1090,8 @@ end;
 
 function TModernRTTITypeHelper.GetMethods: TArray<TModernRTTIMethod>;
 begin
+  if FType = nil then
+    raise EModernRTTIError.CreateFmt(SModernRTTINilHandle, ['GetMethods']);
   if not (FType is TRttiInstanceType) then
     raise EModernRTTIError.CreateFmt(SModernRTTIGetMethodsNotClass, [FType.Name]);
   Result := MethodEnumerate(TRttiInstanceType(FType).MetaclassType);
@@ -1071,6 +1099,8 @@ end;
 
 function TModernRTTITypeHelper.GetMethod(const AName: string): TModernRTTIMethod;
 begin
+  if FType = nil then
+    raise EModernRTTIError.CreateFmt(SModernRTTINilHandle, ['GetMethod']);
   if not (FType is TRttiInstanceType) then
     raise EModernRTTIError.CreateFmt(SModernRTTIGetMethodNotClass, [FType.Name]);
   if not MethodLookup(TRttiInstanceType(FType).MetaclassType, AName, Result) then
