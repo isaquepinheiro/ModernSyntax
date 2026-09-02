@@ -704,9 +704,6 @@ begin
   // contagem de instancia. Consumidor cross-compiler tem comportamento
   // identico. Em estatico devolve `ArrayData.ElCount` (produto de todos os
   // graus para multidimensional — medido; NAO `TotalElementCount`).
-  //
-  // `Result` default para silenciar o compilador — o raise ocorre em
-  // seguida no ramo dinamico.
   ArrayRaiseWrongKind(P);
   if P^.Kind = tkDynArray then
     raise EModernRTTIError.Create(SArrayDynamicLength);
