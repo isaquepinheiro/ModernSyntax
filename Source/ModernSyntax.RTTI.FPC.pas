@@ -194,6 +194,13 @@ resourcestring
     'TModernRTTIParameter.ParamType: nao disponivel no FPC pelo mesmo ' +
     'motivo de Name — a lista de parametros vive em TIntfMethodEntry, ' +
     'que nao alimenta metodos de classe.';
+  // Issue #60 — extensao da D-51.3 ao backend FPC. Prefixo `SFPCUnknown*`
+  // (nao `SFPCNo*`): `SFPCNo*` = feature indisponivel (dado nao existe no
+  // RTTI); aqui o dado existe, so nao bate com nenhum ramo mapeado.
+  // Simetria com `SDelphiUnknownVisibility` (RTTI.Delphi.pas:163-165).
+  SFPCUnknownVisibility =
+    'TMemberVisibility desconhecido (Ord=%d) em %s — ' +
+    'TModernVisibility precisa de novo ramo (issue #60).';
   // Issue #26 — D-4 do ADR. UMA unica resourcestring nomeando origem e
   // destino. Origem sai de V.TypeInfo^.Name; destino sai de
   // PTypeInfo(TypeInfo(T))^.Name. Sem alargamento (D-5): tipos diferentes
@@ -471,25 +478,33 @@ end;
 
 function PropertyVisibility(AToken: Pointer): TModernVisibility;
 begin
-  // D-42.2 + D-42.4 do ADR issue #42: `case` explicito de EXATAMENTE 4
-  // ramos sobre `TRttiProperty(AToken).Visibility`. Dado real — NAO
-  // levanta. `TRttiProperty.Visibility` existe no FPC 3.2.2
-  // (`rtti.pp:340,3776`) e devolve `mvPublished` para propriedades
-  // declaradas em secao `published` de classe `{$M+}`.
+  // D-51.1 do ADR issue #51 estendida a issue #60 ao backend FPC:
+  // `case` de 4 ramos + `else raise EModernRTTIError`. Substitui
+  // parcialmente D-42.2 + D-42.4 do ADR issue #42 (intencao fail-loud
+  // preservada; mecanismo trocado). #51 corrigiu o Delphi primeiro; #60
+  // alinha o FPC aqui — segundo movimento da mesma decisao.
+  //
+  // A guarda existe porque, antes dela, o FPC 3.2.2 aceitava o `case`
+  // sem `else` sem erro, sem warning, sem hint (Delphi ao menos emitia
+  // W1035). Valor nao mapeado por ele mesmo vinha como ordinal 229 no
+  // i386 e 0 no x86_64 — e 0 e `mvPrivate`, um `TModernVisibility`
+  // semanticamente plausivel. Silencioso e convincente e o pior modo
+  // de falha; por isso fail-loud.
   //
   // SEM ramo `mvAutomated` — esse identificador NAO existe em
   // `TMemberVisibility` do FPC 3.2.2 (`rtti.pp:308`); inclui-lo nao
-  // compila. Os quatro ramos esgotam o enum; `else` levantando seria
-  // codigo morto.
-  //
-  // Case labels QUALIFICADOS com `TMemberVisibility.` (do Rtti/TypInfo),
-  // Result com `TModernVisibility.` (da casca), porque os dois enums
-  // declaram constantes homonimas — a mesma disciplina do backend Delphi.
+  // compila. Case labels QUALIFICADOS com `TMemberVisibility.` (do
+  // Rtti/TypInfo), Result com `TModernVisibility.` (da casca), porque
+  // os dois enums declaram constantes homonimas — mesma disciplina do
+  // backend Delphi.
   case TRttiProperty(AToken).Visibility of
     TMemberVisibility.mvPrivate:   Result := TModernVisibility.mvPrivate;
     TMemberVisibility.mvProtected: Result := TModernVisibility.mvProtected;
     TMemberVisibility.mvPublic:    Result := TModernVisibility.mvPublic;
     TMemberVisibility.mvPublished: Result := TModernVisibility.mvPublished;
+  else
+    raise EModernRTTIError.CreateFmt(SFPCUnknownVisibility,
+      [Ord(TRttiProperty(AToken).Visibility), 'PropertyVisibility']);
   end;
 end;
 
