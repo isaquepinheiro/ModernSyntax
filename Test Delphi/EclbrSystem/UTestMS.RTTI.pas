@@ -153,6 +153,18 @@ type
     // internas (Name+Size por fixture).
     [Test]
     procedure TestRecordType_NameAndSize;
+
+    // issue #46 — TModernRTTIArrayType + TModernRTTISetType. QUATRO [Test]
+    // delegando aos cenarios compartilhados (padrao "um cenario, duas
+    // cascas"). Contagem passa de 35 -> 39 [Test].
+    [Test]
+    procedure TestArrayType_Static_LengthAndSize;
+    [Test]
+    procedure TestArrayType_Dynamic_LengthRaises;
+    [Test]
+    procedure TestArrayType_Dynamic_Managed_ElementType;
+    [Test]
+    procedure TestSetType_ElementType;
   end;
 
 implementation
@@ -359,6 +371,28 @@ end;
 procedure TTestModernRTTI.TestRecordType_NameAndSize;
 begin
   Scenario_RecordType_NameAndSize;
+end;
+
+// --- Issue #46 ---------------------------------------------------------------
+
+procedure TTestModernRTTI.TestArrayType_Static_LengthAndSize;
+begin
+  Scenario_ArrayType_Static_LengthAndSize;
+end;
+
+procedure TTestModernRTTI.TestArrayType_Dynamic_LengthRaises;
+begin
+  Scenario_ArrayType_Dynamic_LengthRaises;
+end;
+
+procedure TTestModernRTTI.TestArrayType_Dynamic_Managed_ElementType;
+begin
+  Scenario_ArrayType_Dynamic_Managed_ElementType;
+end;
+
+procedure TTestModernRTTI.TestSetType_ElementType;
+begin
+  Scenario_SetType_ElementType;
 end;
 
 initialization

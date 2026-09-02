@@ -91,6 +91,15 @@ type
     // cenario, duas cascas") delegando ao cenario compartilhado; quatro
     // assercões internas (Name+Size por fixture).
     procedure TestRecordType_NameAndSize;
+    // issue #46 — TModernRTTIArrayType + TModernRTTISetType. QUATRO cenarios
+    // compartilhados (D-7 "um cenario, duas cascas"); cada uma linha
+    // delegando. Cenario 8 (Dynamic_LengthRaises) carrega a Mutacao 1;
+    // cenario 10 (SetType_ElementType) carrega a Mutacao 2. Contagem
+    // passa de 37 -> 41 publisheds.
+    procedure TestArrayType_Static_LengthAndSize;
+    procedure TestArrayType_Dynamic_LengthRaises;
+    procedure TestArrayType_Dynamic_Managed_ElementType;
+    procedure TestSetType_ElementType;
   end;
 
 implementation
@@ -327,6 +336,28 @@ end;
 procedure TTestModernRTTI.TestRecordType_NameAndSize;
 begin
   Scenario_RecordType_NameAndSize;
+end;
+
+// --- Issue #46 ---------------------------------------------------------------
+
+procedure TTestModernRTTI.TestArrayType_Static_LengthAndSize;
+begin
+  Scenario_ArrayType_Static_LengthAndSize;
+end;
+
+procedure TTestModernRTTI.TestArrayType_Dynamic_LengthRaises;
+begin
+  Scenario_ArrayType_Dynamic_LengthRaises;
+end;
+
+procedure TTestModernRTTI.TestArrayType_Dynamic_Managed_ElementType;
+begin
+  Scenario_ArrayType_Dynamic_Managed_ElementType;
+end;
+
+procedure TTestModernRTTI.TestSetType_ElementType;
+begin
+  Scenario_SetType_ElementType;
 end;
 
 initialization

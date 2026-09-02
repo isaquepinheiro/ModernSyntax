@@ -730,6 +730,92 @@ type
     function Size: Integer;
   end;
 
+  /// <summary>
+  ///   Categoria RTTI para <c>tkArray</c> e <c>tkDynArray</c> (issue #46).
+  ///   Ramifica publicamente por <see cref="IsDynamic"/>.
+  /// </summary>
+  /// <remarks>
+  ///   Padrao consagrado da familia (`TModernRTTIRecordType` da issue #45,
+  ///   `TModernRTTIPointerType` da issue #44): `strict private FToken:
+  ///   PTypeInfo`, `FromTypeInfo` sem guarda de `Kind` (D-1 / D-46.1). A
+  ///   guarda vive nos backends via D-4 (helper `ArrayRaiseWrongKind` com
+  ///   guarda combinada [tkArray, tkDynArray] — drift D-46.4).
+  ///
+  ///   <see cref="Length"/> levanta <see cref="EModernRTTIError"/>
+  ///   (<c>SArrayDynamicLength</c>) quando o array e dinamico — em ambos
+  ///   os compiladores (paridade semantica, D-46.2). Use
+  ///   <c>System.Length(arr)</c> em runtime para contar instancias.
+  /// </remarks>
+  TModernRTTIArrayType = record
+  strict private
+    FToken: PTypeInfo;
+  public
+    /// <summary>
+    ///   Constroi o handle a partir de `PTypeInfo`. Nao valida `Kind`
+    ///   (D-46.1): a fabrica na unit publica nao pode carregar
+    ///   `resourcestring` (D-1). A guarda por `Kind` vive em cada metodo,
+    ///   via backend.
+    /// </summary>
+    class function FromTypeInfo(P: PTypeInfo): TModernRTTIArrayType; static;
+    /// <summary>
+    ///   `True` se e so se o `PTypeInfo` descreve um `tkDynArray`; `False`
+    ///   para `tkArray` (estatico). Levanta `EModernRTTIError` para
+    ///   qualquer outro `Kind` (D-4/D-46.4).
+    /// </summary>
+    function IsDynamic: Boolean;
+    /// <summary>
+    ///   Handle para o tipo do elemento. No dinamico usa a property
+    ///   `elType2` (FPC) / `TRttiDynamicArrayType.ElementType` (Delphi);
+    ///   no estatico usa a property `ArrayData.ElType` (FPC) /
+    ///   `TRttiArrayType.ElementType` (Delphi). Nunca os campos crus
+    ///   `elType2Ref`, `elTypeRef` (D-46.5).
+    /// </summary>
+    function ElementType: TModernRTTIType;
+    /// <summary>
+    ///   Tamanho em bytes. No estatico devolve
+    ///   `GetTypeData^.ArrayData.Size` (paridade objetiva entre backends).
+    ///   No dinamico devolve `GetTypeData^.elSize` (tamanho do elemento).
+    /// </summary>
+    function Size: Integer;
+    /// <summary>
+    ///   Numero de elementos no array estatico (produto de todos os graus
+    ///   para multidimensional, medido — equivale a
+    ///   `TotalElementCount`).
+    /// </summary>
+    /// <remarks>
+    ///   Levanta `EModernRTTIError` (`SArrayDynamicLength`) quando o array
+    ///   e dinamico — em ambos os compiladores (paridade semantica,
+    ///   D-46.2). RTTI de tipo nao carrega contagem de instancia; use
+    ///   `System.Length(arr)` em runtime para arrays dinamicos.
+    /// </remarks>
+    function Length: Integer;
+  end;
+
+  /// <summary>
+  ///   Categoria RTTI para <c>tkSet</c> (issue #46).
+  /// </summary>
+  /// <remarks>
+  ///   Padrao consagrado da familia: `strict private FToken: PTypeInfo`,
+  ///   `FromTypeInfo` sem guarda (D-1 / D-46.1). A guarda por `tkSet` vive
+  ///   no backend via helper `SetRaiseWrongKind` (D-4).
+  /// </remarks>
+  TModernRTTISetType = record
+  strict private
+    FToken: PTypeInfo;
+  public
+    /// <summary>
+    ///   Constroi o handle a partir de `PTypeInfo`. Nao valida `Kind`
+    ///   (D-46.1). A guarda por `Kind` vive no metodo, via backend.
+    /// </summary>
+    class function FromTypeInfo(P: PTypeInfo): TModernRTTISetType; static;
+    /// <summary>
+    ///   Handle para o tipo do elemento do set. No FPC usa a property
+    ///   `CompType` (nunca o campo cru `CompTypeRef` — D-46.5); no Delphi
+    ///   delega a `TRttiSetType.ElementType`.
+    /// </summary>
+    function ElementType: TModernRTTIType;
+  end;
+
   /// <summary>Entry point para leitura de RTTI portavel.</summary>
   /// <remarks>
   ///   Ownership: os handles devolvidos por GetType (e por chamadas em
@@ -1211,6 +1297,55 @@ end;
 function TModernRTTIRecordType.Size: Integer;
 begin
   Result := RecordTypeSize(FToken);
+end;
+
+{ TModernRTTIArrayType }
+
+class function TModernRTTIArrayType.FromTypeInfo(P: PTypeInfo): TModernRTTIArrayType;
+begin
+  // D-46.1 do ADR: fabrica NAO valida Kind — a guarda mora em cada metodo
+  // (D-4), no backend. Validar aqui obrigaria resourcestring nesta unit
+  // publica, violando D-1. Mesmo padrao de TModernRTTIRecordType.
+  Result.FToken := P;
+end;
+
+function TModernRTTIArrayType.IsDynamic: Boolean;
+begin
+  Result := ArrayTypeIsDynamic(FToken);
+end;
+
+function TModernRTTIArrayType.ElementType: TModernRTTIType;
+begin
+  Result := TModernRTTIType.FromRtti(TModernRTTI.FContext.GetType(
+    ArrayTypeElementType(FToken)));
+end;
+
+function TModernRTTIArrayType.Size: Integer;
+begin
+  Result := ArrayTypeSize(FToken);
+end;
+
+function TModernRTTIArrayType.Length: Integer;
+begin
+  // B-46.2 / D-46.2: em dinamico o backend levanta EModernRTTIError com
+  // SArrayDynamicLength (paridade semantica entre FPC e Delphi). A casca
+  // aqui apenas delega — a excecao propaga naturalmente.
+  Result := ArrayTypeLength(FToken);
+end;
+
+{ TModernRTTISetType }
+
+class function TModernRTTISetType.FromTypeInfo(P: PTypeInfo): TModernRTTISetType;
+begin
+  // D-46.1: fabrica sem guarda (mesmo padrao dos outros records da
+  // familia).
+  Result.FToken := P;
+end;
+
+function TModernRTTISetType.ElementType: TModernRTTIType;
+begin
+  Result := TModernRTTIType.FromRtti(TModernRTTI.FContext.GetType(
+    SetTypeElementType(FToken)));
 end;
 
 { TModernRTTI }

@@ -105,6 +105,14 @@ function PointerTypeReferredType(P: PTypeInfo): TModernRTTIType;
 function RecordTypeName(P: PTypeInfo): string;
 function RecordTypeSize(P: PTypeInfo): Integer;
 
+// --- Array & Set (issue #46) -------------------------------------------------
+
+function ArrayTypeIsDynamic(P: PTypeInfo): Boolean;
+function ArrayTypeElementType(P: PTypeInfo): PTypeInfo;
+function ArrayTypeSize(P: PTypeInfo): Integer;
+function ArrayTypeLength(P: PTypeInfo): Integer;
+function SetTypeElementType(P: PTypeInfo): PTypeInfo;
+
 // --- Context (issue #28) -----------------------------------------------------
 
 function ContextCreate: IModernRTTIContextToken;
@@ -136,6 +144,15 @@ resourcestring
   // por paridade de mensagem (D-2/D-43.6).
   SRecordWrongKind =
     'TModernRTTIRecordType: TypeInfo does not describe a record type (Kind <> tkRecord).';
+  // Issue #46 — D-46.3/D-46.4/D-46.5 do ADR. resourcestring locais no
+  // backend (D-1). Texto DUPLICADO com o do backend FPC por paridade de
+  // mensagem (D-2/D-43.6). SArrayDynamicLength CURTO (Q4/D-46.3).
+  SArrayWrongKind =
+    'TModernRTTIArrayType: TypeInfo does not describe an array type (Kind not in [tkArray, tkDynArray]).';
+  SArrayDynamicLength =
+    'TModernRTTIArrayType.Length: nao suportado para arrays dinamicos.';
+  SSetWrongKind =
+    'TModernRTTISetType: TypeInfo does not describe a set type (Kind <> tkSet).';
 
 // --- TValueOps ---------------------------------------------------------------
 
@@ -528,6 +545,95 @@ begin
   // barato que TRttiType.TypeSize, permitido pela issue como equivalente).
   RecordRaiseWrongKind(P);
   Result := GetTypeData(P)^.RecSize;
+end;
+
+// --- Array (issue #46) -------------------------------------------------------
+
+// Helper unificado (D-46.4) — paridade estrita com o backend FPC. Guarda
+// COMBINADA [tkArray, tkDynArray] porque as quatro funcoes livres do array
+// aceitam os dois sub-Kinds e ramificam internamente por Kind (D-46.10).
+procedure ArrayRaiseWrongKind(P: PTypeInfo);
+begin
+  if (P = nil) or not (P^.Kind in [tkArray, tkDynArray]) then
+    raise EModernRTTIError.Create(SArrayWrongKind);
+end;
+
+function ArrayTypeIsDynamic(P: PTypeInfo): Boolean;
+begin
+  // D-4/D-46.4: guarda combinada. B-46.1: True SSE Kind = tkDynArray.
+  // Identico ao backend FPC — `Kind` e objeto de linguagem, nao de RTL.
+  ArrayRaiseWrongKind(P);
+  Result := P^.Kind = tkDynArray;
+end;
+
+function ArrayTypeElementType(P: PTypeInfo): PTypeInfo;
+var
+  LCtx: TRttiContext;
+begin
+  // D-46.10 do ADR: TRttiDynamicArrayType e TRttiArrayType sao IRMAS em
+  // System.Rtti (nao existe cast comum). Ramifica por Kind explicitamente.
+  // LCtx local com try/finally (padrao RecordTypeName :505-522 / D-44.5).
+  ArrayRaiseWrongKind(P);
+  LCtx := TRttiContext.Create;
+  try
+    if P^.Kind = tkDynArray then
+      Result := TRttiDynamicArrayType(LCtx.GetType(P)).ElementType.Handle
+    else
+      Result := TRttiArrayType(LCtx.GetType(P)).ElementType.Handle;
+  finally
+    LCtx.Free;
+  end;
+end;
+
+function ArrayTypeSize(P: PTypeInfo): Integer;
+begin
+  // D-46.6: paridade objetiva com o FPC — dinamico usa elSize, estatico usa
+  // ArrayData.Size. Leitura direta via GetTypeData(P)^, sem contexto.
+  ArrayRaiseWrongKind(P);
+  if P^.Kind = tkDynArray then
+    Result := GetTypeData(P)^.elSize
+  else
+    Result := GetTypeData(P)^.ArrayData.Size;
+end;
+
+function ArrayTypeLength(P: PTypeInfo): Integer;
+begin
+  // B-46.2 / D-46.2: paridade semantica com o backend FPC — Length em
+  // dinamico LEVANTA nos DOIS compiladores. Em estatico devolve
+  // ArrayData.ElCount (produto de todos os graus para multidimensional;
+  // Q2 volta 1 provou que ElCount = TotalElementCount — NAO usar
+  // TotalElementCount).
+  ArrayRaiseWrongKind(P);
+  if P^.Kind = tkDynArray then
+    raise EModernRTTIError.Create(SArrayDynamicLength);
+  Result := GetTypeData(P)^.ArrayData.ElCount;
+end;
+
+// --- Set (issue #46) ---------------------------------------------------------
+
+// Helper CLASSICO — guarda por unico Kind (tkSet), paridade estrita com o
+// backend FPC.
+procedure SetRaiseWrongKind(P: PTypeInfo);
+begin
+  if (P = nil) or (P^.Kind <> tkSet) then
+    raise EModernRTTIError.Create(SSetWrongKind);
+end;
+
+function SetTypeElementType(P: PTypeInfo): PTypeInfo;
+var
+  LCtx: TRttiContext;
+begin
+  // D-46.10: delega a TRttiSetType via LCtx local com try/finally (padrao
+  // RecordTypeName). A mutacao obrigatoria 2 vive no lado FPC (property
+  // CompType vs raw CompTypeRef) — a API tipada do Delphi nao expoe
+  // equivalente cru.
+  SetRaiseWrongKind(P);
+  LCtx := TRttiContext.Create;
+  try
+    Result := TRttiSetType(LCtx.GetType(P)).ElementType.Handle;
+  finally
+    LCtx.Free;
+  end;
 end;
 
 // --- Context (issue #28) -----------------------------------------------------

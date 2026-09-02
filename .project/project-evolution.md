@@ -27,6 +27,7 @@ correspondente e o ciclo ativo.
 | 016 | [#43](https://github.com/isaquepinheiro/ModernSyntax/issues/43) | TModernRTTIEnumerationType com guards M-1/M-2 nos dois backends; seis funcoes livres FPC, paridade Delphi, quatro cenarios compartilhados, mutacao de sanidade | 📤 PR aberto — [#48](https://github.com/isaquepinheiro/ModernSyntax/pull/48) |
 | 017 | [#44](https://github.com/isaquepinheiro/ModernSyntax/issues/44) | TModernRTTIPointerType com ReferredType nos dois compiladores; backend FPC com property RefType e MUTACAO OBRIGATORIA; backend Delphi com paridade; dois cenarios compartilhados; mutacao de sanidade | 🔄 in-review |
 | 018 | [#45](https://github.com/isaquepinheiro/ModernSyntax/issues/45) | TModernRTTIRecordType com Name + Size nos dois compiladores; duas fixtures obrigatorias (TRecordFixture45 unmanaged + TRecordFixture45M managed); helper RecordRaiseWrongKind; issue-filha GetFields fora do commit | 📤 PR aberto — [#52](https://github.com/isaquepinheiro/ModernSyntax/pull/52) |
+| 019 | [#46](https://github.com/isaquepinheiro/ModernSyntax/issues/46) | TModernRTTIArrayType + TModernRTTISetType nos dois compiladores; Length levanta em dinamico; helpers ArrayRaiseWrongKind/SetRaiseWrongKind; quatro cenarios compartilhados; duas mutacoes obrigatorias com log no PR | 📤 PR aberto — [#54](https://github.com/isaquepinheiro/ModernSyntax/pull/54) |
 
 ## Legenda
 
@@ -140,6 +141,17 @@ via `GetTypeData`; duas fixtures obrigatórias `TRecordFixture45` (unmanaged) e
 procedure por casca. XMLDoc do record com frase-verbatim do acceptance. Issue-filha
 `GetFields` aberta após merge. Fecha `Closes #45`; parte de `#29`. Build FPC 3.2.2
 x86_64 e i386 obrigatório.
+
+**Ciclo 019** — MAESTRO MODE. A issue #46 é a demanda oficial deste ciclo
+(intake do maestro: `aefos:investigated`). Nenhuma issue ou Epic adicional criada.
+Demanda: implementar `TModernRTTIArrayType` e `TModernRTTISetType` em `Source/ModernSyntax.RTTI.pas`
+(após `TModernRTTIRecordType`); backends FPC e Delphi com cinco funções livres cada, helpers
+`ArrayRaiseWrongKind` (guarda combinada `[tkArray, tkDynArray]`) e `SetRaiseWrongKind`,
+três `resourcestring` por backend (`SArrayWrongKind`, `SArrayDynamicLength`, `SSetWrongKind`);
+`Length` levanta `EModernRTTIError` no dinamico nos dois compiladores; quatro cenarios
+compartilhados (7–10) com fixtures `TArr5Int46`, `TDynByteArr46`, `TDynStrArr46`, `TSetCor46`;
++4 published FPC (37→41), +4 [Test] Delphi (35→39); duas mutacoes obrigatorias com log no PR.
+Fecha `Closes #46`; parte de `#29`. Build FPC 3.2.2 x86_64 e i386 obrigatorio.
 
 **Ciclo 017** — MAESTRO MODE. A issue #44 é a demanda oficial deste ciclo
 (intake do maestro: `aefos:running`). Nenhuma issue ou Epic adicional criada.

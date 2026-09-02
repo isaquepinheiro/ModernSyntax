@@ -127,6 +127,14 @@ function PointerTypeReferredType(P: PTypeInfo): TModernRTTIType;
 function RecordTypeName(P: PTypeInfo): string;
 function RecordTypeSize(P: PTypeInfo): Integer;
 
+// --- Array & Set (issue #46) -------------------------------------------------
+
+function ArrayTypeIsDynamic(P: PTypeInfo): Boolean;
+function ArrayTypeElementType(P: PTypeInfo): PTypeInfo;
+function ArrayTypeSize(P: PTypeInfo): Integer;
+function ArrayTypeLength(P: PTypeInfo): Integer;
+function SetTypeElementType(P: PTypeInfo): PTypeInfo;
+
 // --- Context (issue #28) -----------------------------------------------------
 
 function ContextCreate: IModernRTTIContextToken;
@@ -217,6 +225,17 @@ resourcestring
   // backend Delphi (D-2/D-43.6). Guarda em RecordRaiseWrongKind.
   SRecordWrongKind =
     'TModernRTTIRecordType: TypeInfo does not describe a record type (Kind <> tkRecord).';
+  // Issue #46 — D-46.3/D-46.4/D-46.5 do ADR. Tres resourcestrings no backend
+  // (D-1) com texto IDENTICO ao backend Delphi (D-2/D-43.6). SArrayWrongKind
+  // cobre a guarda combinada [tkArray, tkDynArray] (D-46.4); SSetWrongKind
+  // cobre a guarda por tkSet. SArrayDynamicLength e texto CURTO (Q4/D-46.3)
+  // — RTTI reporta o que sabe do tipo, nao ensina API de instancia.
+  SArrayWrongKind =
+    'TModernRTTIArrayType: TypeInfo does not describe an array type (Kind not in [tkArray, tkDynArray]).';
+  SArrayDynamicLength =
+    'TModernRTTIArrayType.Length: nao suportado para arrays dinamicos.';
+  SSetWrongKind =
+    'TModernRTTISetType: TypeInfo does not describe a set type (Kind <> tkSet).';
 
 // --- TValueOps ---------------------------------------------------------------
 
@@ -625,6 +644,98 @@ begin
   // retorna ManagedFldCount = 2 — leitura da uniao).
   RecordRaiseWrongKind(P);
   Result := GetTypeData(P)^.RecSize;
+end;
+
+// --- Array (issue #46) -------------------------------------------------------
+
+// Helper unificado (D-46.4) — drift novo do #46: guarda COMBINADA [tkArray,
+// tkDynArray] porque as quatro funcoes livres do array aceitam os dois
+// sub-Kinds e ramificam internamente. Padrao adaptado de RecordRaiseWrongKind
+// (:606 / issue #45). Preparado para receber `Bounds`/`Dims` de issue-filha
+// sem duplicar guarda inline.
+procedure ArrayRaiseWrongKind(P: PTypeInfo);
+begin
+  if (P = nil) or not (P^.Kind in [tkArray, tkDynArray]) then
+    raise EModernRTTIError.Create(SArrayWrongKind);
+end;
+
+function ArrayTypeIsDynamic(P: PTypeInfo): Boolean;
+begin
+  // D-4/D-46.4: guarda combinada. B-46.1: True SSE Kind = tkDynArray.
+  ArrayRaiseWrongKind(P);
+  Result := P^.Kind = tkDynArray;
+end;
+
+function ArrayTypeElementType(P: PTypeInfo): PTypeInfo;
+begin
+  // D-46.5: SEMPRE via property `elType2` (dinamico) / `ArrayData.ElType`
+  // (estatico). Os campos crus correspondentes (as referencias
+  // intermediarias) NAO sao usados — layout pode divergir do PTypeInfo
+  // esperado, mesmo defeito das issues #29 e #44. Aceitacao: o grep de
+  // refs crus na unit inteira devolve 0 (D-46.11).
+  //
+  // MUTACAO OBRIGATORIA 1 (D-46.9 / issue #46 / cenario 8): trocar
+  // `GetTypeData(P)^.elType2` por `GetTypeData(P)^.elType` no ramo dinamico
+  // deixa Scenario_ArrayType_Dynamic_LengthRaises vermelho/AV — `array of
+  // Byte` (unmanaged) tem `elType = nil`, e o acesso posterior a `.Name`
+  // sobre nil AVs. O log do cenario 8 vai ao PR.
+  ArrayRaiseWrongKind(P);
+  if P^.Kind = tkDynArray then
+    Result := GetTypeData(P)^.elType2
+  else
+    Result := GetTypeData(P)^.ArrayData.ElType;
+end;
+
+function ArrayTypeSize(P: PTypeInfo): Integer;
+begin
+  // D-46.6: dinamico -> elSize (tamanho do elemento); estatico ->
+  // ArrayData.Size (paridade objetiva com Delphi, medido no relatorio).
+  ArrayRaiseWrongKind(P);
+  if P^.Kind = tkDynArray then
+    Result := GetTypeData(P)^.elSize
+  else
+    Result := GetTypeData(P)^.ArrayData.Size;
+end;
+
+function ArrayTypeLength(P: PTypeInfo): Integer;
+begin
+  // B-46.2 / D-46.2: paridade semantica com o backend Delphi — Length em
+  // dinamico LEVANTA nos DOIS compiladores; RTTI de tipo nao carrega
+  // contagem de instancia. Consumidor cross-compiler tem comportamento
+  // identico. Em estatico devolve `ArrayData.ElCount` (produto de todos os
+  // graus para multidimensional — medido; NAO `TotalElementCount`).
+  //
+  // `Result` default para silenciar o compilador — o raise ocorre em
+  // seguida no ramo dinamico.
+  ArrayRaiseWrongKind(P);
+  if P^.Kind = tkDynArray then
+    raise EModernRTTIError.Create(SArrayDynamicLength);
+  Result := GetTypeData(P)^.ArrayData.ElCount;
+end;
+
+// --- Set (issue #46) ---------------------------------------------------------
+
+// Helper CLASSICO — guarda por unico Kind (tkSet), padrao de
+// EnumRaiseWrongKind (:483) / PointerTypeReferredType (:577) /
+// RecordRaiseWrongKind (:606).
+procedure SetRaiseWrongKind(P: PTypeInfo);
+begin
+  if (P = nil) or (P^.Kind <> tkSet) then
+    raise EModernRTTIError.Create(SSetWrongKind);
+end;
+
+function SetTypeElementType(P: PTypeInfo): PTypeInfo;
+begin
+  // D-46.5: SEMPRE via property `CompType` — o campo cru correspondente
+  // le regiao errada da uniao. Aceitacao: o grep de refs crus na unit
+  // inteira devolve 0 (D-46.11).
+  //
+  // MUTACAO OBRIGATORIA 2 (D-46.9 / issue #46 / cenario 10): trocar
+  // `GetTypeData(P)^.CompType` pelo cast do campo cru correspondente
+  // (PTypeInfo(GetTypeData(P)^.<compref>)) deixa Scenario_SetType_ElementType
+  // vermelho (AV ou nome lixo). O log do cenario 10 vai ao PR.
+  SetRaiseWrongKind(P);
+  Result := GetTypeData(P)^.CompType;
 end;
 
 // --- Context (issue #28) -----------------------------------------------------
