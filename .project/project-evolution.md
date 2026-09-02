@@ -26,7 +26,7 @@ correspondente e o ciclo ativo.
 | 015 | [#42](https://github.com/isaquepinheiro/ModernSyntax/issues/42) | TModernVisibility publico; fechar vazamento em TModernRTTIMethod.Visibility; adicionar TModernRTTIProperty.Visibility — backends Delphi/FPC, tres cenarios, mutacao de sanidade | 📤 PR aberto — [#47](https://github.com/isaquepinheiro/ModernSyntax/pull/47) |
 | 016 | [#43](https://github.com/isaquepinheiro/ModernSyntax/issues/43) | TModernRTTIEnumerationType com guards M-1/M-2 nos dois backends; seis funcoes livres FPC, paridade Delphi, quatro cenarios compartilhados, mutacao de sanidade | 📤 PR aberto — [#48](https://github.com/isaquepinheiro/ModernSyntax/pull/48) |
 | 017 | [#44](https://github.com/isaquepinheiro/ModernSyntax/issues/44) | TModernRTTIPointerType com ReferredType nos dois compiladores; backend FPC com property RefType e MUTACAO OBRIGATORIA; backend Delphi com paridade; dois cenarios compartilhados; mutacao de sanidade | 🔄 in-review |
-| 018 | [#45](https://github.com/isaquepinheiro/ModernSyntax/issues/45) | TModernRTTIRecordType com Name + Size nos dois compiladores; duas fixtures obrigatorias (TRecordFixture45 unmanaged + TRecordFixture45M managed); helper RecordRaiseWrongKind; issue-filha GetFields fora do commit | 🔄 in-review |
+| 018 | [#45](https://github.com/isaquepinheiro/ModernSyntax/issues/45) | TModernRTTIRecordType com Name + Size nos dois compiladores; duas fixtures obrigatorias (TRecordFixture45 unmanaged + TRecordFixture45M managed); helper RecordRaiseWrongKind; issue-filha GetFields fora do commit | 📤 PR aberto — [#52](https://github.com/isaquepinheiro/ModernSyntax/pull/52) |
 
 ## Legenda
 
