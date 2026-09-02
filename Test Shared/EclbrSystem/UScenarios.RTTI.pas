@@ -197,6 +197,27 @@ type
   // (secao `type` do interface) herdado de TCor/TDia (issue #43).
   PInt44 = ^Integer;
 
+  // Fixtures para issue #45 (TModernRTTIRecordType). Duas fixtures
+  // OBRIGATORIAS — uma so nao passa (D-45.4 do ADR):
+  //
+  //   (1) Unmanaged: Size = 8 CONSTANTE nos seis alvos (FPC i386/x86_64,
+  //       Delphi 23.0/37.0 x Win32/Win64) — provada por medicao do
+  //       relatorio da issue #45. Um backend que devolvesse a constante 8
+  //       passaria por coincidencia com esta sozinha.
+  TRecordFixture45 = record
+    FieldA, FieldB: Integer;
+  end;
+
+  //   (2) Managed: Size varia 8/16 por bitness (Delphi Win32/FPC i386 = 8;
+  //       Delphi Win64/FPC x86_64 = 16). Bloqueia backend que devolva
+  //       constante. Regra de teste 3: variar a natureza do elemento
+  //       (unmanaged/managed) para nao passar por coincidencia (mesma
+  //       familia das correcoes #29 `ElType` e #44 `Pointer` nil).
+  TRecordFixture45M = record
+    S: string;
+    I: Integer;
+  end;
+
 procedure Scenario_GetProperties_ReturnsPublishedProps;
 procedure Scenario_GetValue_Integer_Roundtrip;
 procedure Scenario_GetValue_String_Roundtrip;
@@ -259,6 +280,13 @@ procedure Scenario_EnumerationType_OutOfRangeAndUnknownRaises;
 // tocar .Name aqui AV por RTTI.pas:846, issue #49 registra).
 procedure Scenario_PointerType_ReferredType_Matches;
 procedure Scenario_PointerType_ReferredType_Nil_ForBarePointer;
+// Cenario da issue #45 — TModernRTTIRecordType. UM unico cenario com
+// QUATRO assercões (Name+Size por fixture). Padrao "um cenario, duas
+// cascas" (D-7). Duas fixtures obrigatorias (D-45.4): uma so, com Size = 8
+// constante nos seis alvos, seria anulada por qualquer backend que devolva
+// a constante 8. So por igualdade (`Size = SizeOf(T)`) — desigualdade
+// `>=` nao prova nada contra backend constante.
+procedure Scenario_RecordType_NameAndSize;
 
 implementation
 
@@ -1199,6 +1227,32 @@ begin
   LReferred := LType.ReferredType;
   if not LReferred.IsNil then
     Fail('ReferredType(Pointer) deveria ter IsNil = True.');
+end;
+
+// --- Issue #45 — TModernRTTIRecordType ---------------------------------------
+
+procedure Scenario_RecordType_NameAndSize;
+var
+  LRec, LRecM: TModernRTTIRecordType;
+begin
+  // D-45.4 do ADR issue #45: DUAS fixtures obrigatorias, QUATRO assercões.
+  // TRecordFixture45 tem Size = 8 CONSTANTE nos seis alvos (medicao do
+  // relatorio); um backend que devolvesse a constante 8 passaria por
+  // coincidencia com uma so. TRecordFixture45M (managed) varia 8/16 por
+  // bitness — nenhuma constante passa nas quatro. So por IGUALDADE
+  // (`Size = SizeOf(T)`) — desigualdade `>=` nao prova nada contra
+  // backend constante (`8 >= 8` tambem passa).
+  LRec  := TModernRTTIRecordType.FromTypeInfo(TypeInfo(TRecordFixture45));
+  LRecM := TModernRTTIRecordType.FromTypeInfo(TypeInfo(TRecordFixture45M));
+
+  if LRec.Name  <> 'TRecordFixture45' then
+    Fail('Name(TRecordFixture45) inesperado.');
+  if LRec.Size  <> SizeOf(TRecordFixture45) then
+    Fail('Size(TRecordFixture45) != SizeOf(TRecordFixture45).');
+  if LRecM.Name <> 'TRecordFixture45M' then
+    Fail('Name(TRecordFixture45M) inesperado.');
+  if LRecM.Size <> SizeOf(TRecordFixture45M) then
+    Fail('Size(TRecordFixture45M) != SizeOf(TRecordFixture45M).');
 end;
 
 end.

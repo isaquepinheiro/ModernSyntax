@@ -147,6 +147,12 @@ type
     procedure TestPointerType_ReferredType_Matches;
     [Test]
     procedure TestPointerType_ReferredType_Nil_ForBarePointer;
+
+    // issue #45 — TModernRTTIRecordType. UMA unica [Test] (D-7 "um cenario,
+    // duas cascas") delegando ao cenario compartilhado; quatro assercões
+    // internas (Name+Size por fixture).
+    [Test]
+    procedure TestRecordType_NameAndSize;
   end;
 
 implementation
@@ -346,6 +352,13 @@ end;
 procedure TTestModernRTTI.TestPointerType_ReferredType_Nil_ForBarePointer;
 begin
   Scenario_PointerType_ReferredType_Nil_ForBarePointer;
+end;
+
+// --- Issue #45 ---------------------------------------------------------------
+
+procedure TTestModernRTTI.TestRecordType_NameAndSize;
+begin
+  Scenario_RecordType_NameAndSize;
 end;
 
 initialization

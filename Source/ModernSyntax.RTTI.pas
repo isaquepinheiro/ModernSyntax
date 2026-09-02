@@ -679,6 +679,57 @@ type
     function ReferredType: TModernRTTIType;
   end;
 
+  /// <summary>
+  ///   Handle leve para um `TypeInfo` de `Kind = tkRecord` (issue #45).
+  ///   Esta entrega cobre `Name` e `Size` apenas; `GetFields` fica para
+  ///   issue propria condicionada a medir `TRecordElement.Name` num FPC
+  ///   vivo.
+  /// </summary>
+  /// <remarks>
+  ///   Padrao consagrado da familia (`TModernRTTIEnumerationType` da issue
+  ///   #43, `TModernRTTIPointerType` da issue #44): `strict private
+  ///   FToken: PTypeInfo`, `FromTypeInfo` sem guarda de `Kind` (D-1 /
+  ///   D-45.1 — a guarda vive nos backends via D-4), `Name` e `Size`
+  ///   publicos que delegam ao backend selecionado pelo unico `{$IFDEF}`
+  ///   da unit.
+  ///
+  ///   `record end` (record vazio) e valido nos seis alvos e tem
+  ///   `Size = 0` (D-45.8) — nenhuma guarda rejeita por `Size`.
+  /// </remarks>
+  TModernRTTIRecordType = record
+  strict private
+    FToken: PTypeInfo;
+  public
+    /// <summary>
+    ///   Constroi o handle a partir de `PTypeInfo`. Nao valida `Kind`
+    ///   (D-45.1): a fabrica na unit publica nao pode carregar
+    ///   `resourcestring` (D-1). A guarda por `Kind` vive em cada metodo,
+    ///   via backend.
+    /// </summary>
+    class function FromTypeInfo(P: PTypeInfo): TModernRTTIRecordType; static;
+    /// <summary>
+    ///   Nome do tipo record como aparece na fonte (ex.:
+    ///   `TRecordFixture45`).
+    /// </summary>
+    /// <remarks>
+    ///   Levanta `EModernRTTIError` quando o `FToken` tem `Kind` diferente
+    ///   de `tkRecord` (D-4). No Delphi delega a `TRttiRecordType.Name`
+    ///   (cobre o caso generico/aninhado); no FPC 3.2.2 le `P^.Name` direto
+    ///   (mesmo observavel medido nos alvos).
+    /// </remarks>
+    function Name: string;
+    /// <summary>
+    ///   `GetTypeData^.RecSize` — tamanho em bytes do layout do record.
+    ///   `record end` (record vazio) e valido e tem `Size = 0`.
+    /// </summary>
+    /// <remarks>
+    ///   Levanta `EModernRTTIError` quando o `FToken` tem `Kind` diferente
+    ///   de `tkRecord` (D-4). Paridade objetiva entre os dois backends:
+    ///   ambos usam `GetTypeData(P)^.RecSize` (D-45.3 / D-45.6).
+    /// </remarks>
+    function Size: Integer;
+  end;
+
   /// <summary>Entry point para leitura de RTTI portavel.</summary>
   /// <remarks>
   ///   Ownership: os handles devolvidos por GetType (e por chamadas em
@@ -1139,6 +1190,27 @@ end;
 function TModernRTTIPointerType.ReferredType: TModernRTTIType;
 begin
   Result := PointerTypeReferredType(FToken);
+end;
+
+{ TModernRTTIRecordType }
+
+class function TModernRTTIRecordType.FromTypeInfo(P: PTypeInfo): TModernRTTIRecordType;
+begin
+  // D-45.1 do ADR: fabrica NAO valida Kind — a guarda mora em cada metodo
+  // (D-4), no backend. Validar aqui obrigaria resourcestring nesta unit
+  // publica, violando D-1. Mesmo padrao de TModernRTTIEnumerationType e
+  // TModernRTTIPointerType.
+  Result.FToken := P;
+end;
+
+function TModernRTTIRecordType.Name: string;
+begin
+  Result := RecordTypeName(FToken);
+end;
+
+function TModernRTTIRecordType.Size: Integer;
+begin
+  Result := RecordTypeSize(FToken);
 end;
 
 { TModernRTTI }
