@@ -141,8 +141,8 @@ type
   // TDia (7 elementos) e OBRIGATORIO no cenario de contagem para matar a
   // mutacao `MaxValue -> MaxValue - 1` em EnumGetNames (D-43.7 / M-4 do
   // ADR): com TCor (3 elementos), o off-by-one no fim passaria verde. TCor
-  // permanece declarado para uso futuro (D-43.9); nao ha cenario que o
-  // exercite neste PR.
+  // permanece declarado para uso futuro (D-43.9); e exercitado hoje pelo
+  // cenario 10 da #46 (`TSetCor46 = set of TCor`, assercao em :1419-1422).
   TCor = (cA, cB, cC);
   TDia = (dSeg, dTer, dQua, dQui, dSex, dSab, dDom);
 
@@ -1300,8 +1300,11 @@ begin
   // D-45.4 do ADR issue #45: DUAS fixtures obrigatorias, QUATRO assercões.
   // TRecordFixture45 tem Size = 8 CONSTANTE nos seis alvos (medicao do
   // relatorio); um backend que devolvesse a constante 8 passaria por
-  // coincidencia com uma so. TRecordFixture45M (managed) varia 8/16 por
-  // bitness — nenhuma constante passa nas quatro. So por IGUALDADE
+  // coincidencia com uma so. TRecordFixture45M (managed) so DIVERGE em
+  // 64-bit (mede 16); em 32-bit mede 8 igual a TRecordFixture45, entao a
+  // constante `8` passaria verde no i386 isoladamente. A protecao
+  // anti-backend-constante nao vive na fixture isolada, mas na matriz de
+  // SEIS alvos rodando nos dois bitness. So por IGUALDADE
   // (`Size = SizeOf(T)`) — desigualdade `>=` nao prova nada contra
   // backend constante (`8 >= 8` tambem passa).
   LRec  := TModernRTTIRecordType.FromTypeInfo(TypeInfo(TRecordFixture45));
@@ -1323,9 +1326,21 @@ procedure Scenario_ArrayType_Static_LengthAndSize;
 var
   LArr: TModernRTTIArrayType;
 begin
-  // Cenario 7: array estatico. Quatro asserções fixando as duas
-  // propriedades observaveis (Length, Size) + IsDynamic = False +
-  // ElementType nao nulo.
+  // Cenario 7: array estatico. Cinco asserções fixando as propriedades
+  // observaveis (Length, Size, IsDynamic = False) mais IsNil como
+  // pre-condicao e identidade do ElementType contra o handle de Integer.
+  //
+  // MUTACAO OBRIGATORIA (issue #57 / D-57.2): se o backend FPC trocar
+  // `GetTypeData(P)^.ArrayData.ElType` por `P` em ArrayTypeElementType
+  // (`RTTI.FPC.pas:686`, ramo estatico), o handle devolvido e o proprio
+  // array — nao-nulo e errado. O antigo `IsNil` engolia; a assercao de
+  // identidade abaixo mata a mutacao nos DOIS bitness (i386 e x86_64).
+  //
+  // Nota cross-compiler (D-57.3): Delphi diz 'Integer', FPC diz
+  // 'LongInt'. A asserção compara contra
+  // TModernRTTI.GetType(TypeInfo(Integer)).Name, que a propria RTL do
+  // compilador em uso absorve — literal `'Integer'`/`'LongInt'` quebra
+  // no outro lado. CA-5 preservado (zero {$IFDEF FPC} neste arquivo).
   //
   // So por IGUALDADE: `Length = 5`, `Size = SizeOf(TArr5Int46)`.
   // Desigualdade `>=` nao prova nada contra backend constante.
@@ -1339,6 +1354,8 @@ begin
       [LArr.Size, SizeOf(TArr5Int46)]));
   if LArr.ElementType.IsNil then
     Fail('ElementType(TArr5Int46) IsNil — esperava handle valido para Integer.');
+  if LArr.ElementType.Name <> TModernRTTI.GetType(TypeInfo(Integer)).Name then
+    Fail('ElementType(TArr5Int46) nao e Integer — handle identico esperado.');
 end;
 
 procedure Scenario_ArrayType_Dynamic_LengthRaises;
