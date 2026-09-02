@@ -34,7 +34,7 @@ correspondente e o ciclo ativo.
 | 023 | [#57](https://github.com/isaquepinheiro/ModernSyntax/issues/57) | chore: corrige quatro residuos de documentacao/teste dos ciclos #45 e #46 — comentario TCor (A), comentario TRecordFixture45M (B), cenario 7 com assercao de identidade (C), remocao de comentario fantasma em RTTI.FPC.pas (D). Dois arquivos, commit unico, mutacao obrigatoria. | 📤 PR aberto — [#61](https://github.com/isaquepinheiro/ModernSyntax/pull/61) |
 | 024 | [#62](https://github.com/isaquepinheiro/ModernSyntax/issues/62) | "docs(rtti): corrigir XMLDoc TModernVisibility, remarks Attributes e comentarios do cenario NilHandle — sete edicoes em 4 arquivos Pascal, nenhuma linha executavel muda." | 📤 PR aberto — [#63](https://github.com/isaquepinheiro/ModernSyntax/pull/63) |
 | 025 | [#60](https://github.com/isaquepinheiro/ModernSyntax/issues/60) | "fix(rtti-fpc): else raise EModernRTTIError no PropertyVisibility do backend FPC — resourcestring SFPCUnknownVisibility + guarda fail-loud + comentario reescrito + XMLDoc corrigido. 4 edicoes em 2 arquivos." | 📤 PR aberto — [#65](https://github.com/isaquepinheiro/ModernSyntax/pull/65) |
-| 026 | [#6](https://github.com/isaquepinheiro/ModernSyntax/issues/6) | chore(docs): corrigir 10 itens de texto no bundle OKF — numeros divergentes e ancoras fora do lugar em 4 arquivos de analise; 1 commit; zero mudancas em Source/ | 🔄 in-review |
+| 026 | [#6](https://github.com/isaquepinheiro/ModernSyntax/issues/6) | chore(docs): corrigir 10 itens de texto no bundle OKF — numeros divergentes e ancoras fora do lugar em 4 arquivos de analise; 1 commit; zero mudancas em Source/ | 📤 PR aberto |
 
 ## Legenda
 
