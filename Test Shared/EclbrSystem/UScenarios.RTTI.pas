@@ -142,7 +142,7 @@ type
   // mutacao `MaxValue -> MaxValue - 1` em EnumGetNames (D-43.7 / M-4 do
   // ADR): com TCor (3 elementos), o off-by-one no fim passaria verde. TCor
   // permanece declarado para uso futuro (D-43.9); e exercitado hoje pelo
-  // cenario 10 da #46 (`TSetCor46 = set of TCor`, assercao em :1419-1422).
+  // cenario 10 da #46 (`TSetCor46 = set of TCor`, assercao em Scenario_SetType_ElementType).
   TCor = (cA, cB, cC);
   TDia = (dSeg, dTer, dQua, dQui, dSex, dSab, dDom);
 
@@ -315,9 +315,10 @@ procedure Scenario_PointerType_ReferredType_Nil_ForBarePointer;
 // Um unico cenario compartilhado (padrao "um cenario, duas cascas" da
 // #25) que constroi o handle pelo caminho publico
 // (TModernRTTIContext.FindType de nome inexistente) e afirma
-// EModernRTTIError nos cinco membros afetados (Name, GetProperties,
-// GetFields, GetMethods, GetMethod). Cada bloco verifica que a mensagem
-// cita o nome do membro chamado (B-49.2 do ESP).
+// EModernRTTIError nos seis membros afetados (Name, GetProperties,
+// GetFields, GetMethods, GetMethod, Attributes). Cada bloco verifica que
+// a mensagem é exatamente `Format(SModernRTTINilHandle, [<membro>])`
+// (B-49.2 do ESP).
 procedure Scenario_NilHandle_AllMembers_Raises;
 // Cenario da issue #45 — TModernRTTIRecordType. UM unico cenario com
 // QUATRO assercões (Name+Size por fixture). Padrao "um cenario, duas
@@ -1449,12 +1450,12 @@ var
   LMsg: string;
 begin
   // ADR D-49.1 + ESP B-49.1..B-49.6: sobre um handle com IsNil = True,
-  // os cinco membros afetados (Name, GetProperties, GetFields, GetMethods,
-  // GetMethod) levantam EModernRTTIError.CreateFmt(SModernRTTINilHandle,
+  // os seis membros afetados (Name, GetProperties, GetFields, GetMethods,
+  // GetMethod, Attributes) levantam EModernRTTIError.CreateFmt(SModernRTTINilHandle,
   // [<membro>]) — nao AV, nao vazio silencioso. O handle e construido pelo
   // CAMINHO PUBLICO (B-49.6): TModernRTTIContext.FindType de um nome que
-  // ninguem registrou. Cada bloco verifica que a mensagem cita o nome do
-  // membro chamado (B-49.2).
+  // ninguem registrou. Cada bloco verifica que a mensagem é exatamente
+  // `Format(SModernRTTINilHandle, [<membro>])` (B-49.2).
   LCtx := TModernRTTIContext.Create;
   LType := LCtx.FindType('TipoQueNaoExiste_Issue49');
   if not LType.IsNil then

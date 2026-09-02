@@ -168,7 +168,7 @@ type
 
     // issue #49 — contrato de nil-handle em TModernRTTIType. UMA [Test]
     // (D-7 "um cenario, duas cascas") delegando ao cenario compartilhado;
-    // internamente afirma EModernRTTIError nos cinco membros afetados.
+    // internamente afirma EModernRTTIError nos seis membros afetados.
     [Test]
     procedure TestNilHandle_AllMembers_Raises;
   end;

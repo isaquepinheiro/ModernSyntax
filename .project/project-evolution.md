@@ -32,6 +32,7 @@ correspondente e o ciclo ativo.
 | 021 | [#56](https://github.com/isaquepinheiro/ModernSyntax/issues/56) | TModernRTTIType.Attributes fora do contrato nil da #49 — guarda em PropAttributes; uniformizacao dos cinco blocos (Pos → igualdade estrita); sexto bloco Attributes em Scenario_NilHandle_AllMembers_Raises | 📤 PR aberto — [#58](https://github.com/isaquepinheiro/ModernSyntax/pull/58) |
 | 022 | [#51](https://github.com/isaquepinheiro/ModernSyntax/issues/51) | Fix: else raise nos dois sites de Visibility do backend Delphi — resourcestring privada SDelphiUnknownVisibility + else raise em MethodVisibility e PropertyVisibility + reescrita de 2 comentarios + reescrita de 1 XML-doc. Dois arquivos, commit unico. | 📤 PR aberto — [#59](https://github.com/isaquepinheiro/ModernSyntax/pull/59) |
 | 023 | [#57](https://github.com/isaquepinheiro/ModernSyntax/issues/57) | chore: corrige quatro residuos de documentacao/teste dos ciclos #45 e #46 — comentario TCor (A), comentario TRecordFixture45M (B), cenario 7 com assercao de identidade (C), remocao de comentario fantasma em RTTI.FPC.pas (D). Dois arquivos, commit unico, mutacao obrigatoria. | 📤 PR aberto — [#61](https://github.com/isaquepinheiro/ModernSyntax/pull/61) |
+| 024 | [#62](https://github.com/isaquepinheiro/ModernSyntax/issues/62) | "docs(rtti): corrigir XMLDoc TModernVisibility, remarks Attributes e comentarios do cenario NilHandle — sete edicoes em 4 arquivos Pascal, nenhuma linha executavel muda." | 📤 PR aberto — [#63](https://github.com/isaquepinheiro/ModernSyntax/pull/63) |
 
 ## Legenda
 
@@ -177,6 +178,15 @@ como primeira instrucao de `PropAttributes` (antes do `// Issue #27:` e do
 mensagem); inserir sexto bloco para `Attributes` apos o quinto. Dois arquivos,
 commit unico, build FPC 3.2.2 x86_64. Nenhuma `resourcestring` nova — `SModernRTTINilHandle`
 ja existe em linha 892.
+
+**Ciclo 024** — MAESTRO MODE. A issue #62 é a demanda oficial deste ciclo
+(intake do maestro: `aefos:investigated`). Nenhuma issue ou Epic adicional criada.
+Demanda: sete edições documentais (XMLDoc `///` e comentários `//`) em quatro arquivos
+Pascal — XMLDoc `TModernVisibility` em `Source/ModernSyntax.RTTI.pas:80-82`, remarks
+nil para `Attributes` em `:427-433`, âncora `Scenario_SetType_ElementType` e
+comentários de seis membros em `UScenarios.RTTI.pas`, e contagem "seis membros
+afetados" nas duas cascas de teste (Delphi `:171`, FPC `:105`). Nenhuma linha
+executável muda. Build FPC 3.2.2 x86_64 obrigatório.
 
 **Ciclo 017** — MAESTRO MODE. A issue #44 é a demanda oficial deste ciclo
 (intake do maestro: `aefos:running`). Nenhuma issue ou Epic adicional criada.
