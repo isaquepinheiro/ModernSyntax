@@ -76,9 +76,10 @@ type
   ///   `TMemberVisibility` do Delphi/FPC: `mvPrivate < mvProtected <
   ///   mvPublic < mvPublished`. Se `TMemberVisibility` de algum
   ///   compilador vier a incluir valor adicional (ex.: `mvAutomated` no
-  ///   Delphi), o `case` explicito nos backends (D-42.2) acusa erro no
-  ///   primeiro build — nunca `TModernVisibility(Ord(...))`, que
-  ///   silenciaria em runtime.
+  ///   Delphi), o backend Delphi levanta `EModernRTTIError` no primeiro
+  ///   chamador (D-51.1 do ADR issue #51); o backend FPC valida
+  ///   exaustividade em compile-time — `case` de 4 ramos sem `else` e
+  ///   correto la (4 valores em `rtti.pp:308`).
   /// </summary>
   TModernVisibility = (mvPrivate, mvProtected, mvPublic, mvPublished);
 
