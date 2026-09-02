@@ -102,7 +102,7 @@ type
     procedure TestSetType_ElementType;
     // issue #49 — contrato de nil-handle em TModernRTTIType. UMA published
     // (D-7 "um cenario, duas cascas") delegando ao cenario compartilhado;
-    // internamente afirma EModernRTTIError nos cinco membros afetados.
+    // internamente afirma EModernRTTIError nos seis membros afetados.
     procedure TestNilHandle_AllMembers_Raises;
   end;
 

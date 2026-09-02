@@ -77,9 +77,12 @@ type
   ///   mvPublic < mvPublished`. Se `TMemberVisibility` de algum
   ///   compilador vier a incluir valor adicional (ex.: `mvAutomated` no
   ///   Delphi), o backend Delphi levanta `EModernRTTIError` no primeiro
-  ///   chamador (D-51.1 do ADR issue #51); o backend FPC valida
-  ///   exaustividade em compile-time — `case` de 4 ramos sem `else` e
-  ///   correto la (4 valores em `rtti.pp:308`).
+  ///   chamador (D-51.1 do ADR issue #51); no FPC os 4 ramos esgotam o
+  ///   `TMemberVisibility` atual (`rtti.pp:308`), então o `case` sem
+  ///   `else` é correto **hoje** — mas o FPC **tampouco** faz análise
+  ///   de exaustividade: medido no 3.2.2, valor não mapeado compila
+  ///   **sem erro e sem warning** e devolve lixo (229 em i386, 0 em
+  ///   x86_64 — e 0 é `mvPrivate`, um valor plausível). Ver #60.
   /// </summary>
   TModernVisibility = (mvPrivate, mvProtected, mvPublic, mvPublished);
 
@@ -430,6 +433,10 @@ type
     ///   nos dois compiladores (regra 2 do ADENDO do ciclo 004: no Delphi,
     ///   funde nativos com registrados; no FPC, so registrados).
     /// </summary>
+    /// <remarks>
+    ///   Quando <c>IsNil = True</c>, levanta <c>EModernRTTIError</c>;
+    ///   verifique <c>IsNil</c> antes de chamar.
+    /// </remarks>
     property Attributes: TArray<TObject> read PropAttributes;
   end;
 
