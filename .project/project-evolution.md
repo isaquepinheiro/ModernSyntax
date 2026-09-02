@@ -28,7 +28,7 @@ correspondente e o ciclo ativo.
 | 017 | [#44](https://github.com/isaquepinheiro/ModernSyntax/issues/44) | TModernRTTIPointerType com ReferredType nos dois compiladores; backend FPC com property RefType e MUTACAO OBRIGATORIA; backend Delphi com paridade; dois cenarios compartilhados; mutacao de sanidade | 🔄 in-review |
 | 018 | [#45](https://github.com/isaquepinheiro/ModernSyntax/issues/45) | TModernRTTIRecordType com Name + Size nos dois compiladores; duas fixtures obrigatorias (TRecordFixture45 unmanaged + TRecordFixture45M managed); helper RecordRaiseWrongKind; issue-filha GetFields fora do commit | 📤 PR aberto — [#52](https://github.com/isaquepinheiro/ModernSyntax/pull/52) |
 | 019 | [#46](https://github.com/isaquepinheiro/ModernSyntax/issues/46) | TModernRTTIArrayType + TModernRTTISetType nos dois compiladores; Length levanta em dinamico; helpers ArrayRaiseWrongKind/SetRaiseWrongKind; quatro cenarios compartilhados; duas mutacoes obrigatorias com log no PR | 📤 PR aberto — [#54](https://github.com/isaquepinheiro/ModernSyntax/pull/54) |
-| 020 | [#49](https://github.com/isaquepinheiro/ModernSyntax/issues/49) | Contrato unico de handle nil em TModernRTTIType — cinco guardas (Name/GetProperties/GetFields/GetMethods/GetMethod); EModernRTTIError + SModernRTTINilHandle; XMLDocs; cenario NilHandle_AllMembers_Raises; desbloqueio D-44.6 | 🔄 in-review |
+| 020 | [#49](https://github.com/isaquepinheiro/ModernSyntax/issues/49) | Contrato unico de handle nil em TModernRTTIType — cinco guardas (Name/GetProperties/GetFields/GetMethods/GetMethod); EModernRTTIError + SModernRTTINilHandle; XMLDocs; cenario NilHandle_AllMembers_Raises; desbloqueio D-44.6 | 📤 PR aberto — [#55](https://github.com/isaquepinheiro/ModernSyntax/pull/55) |
 
 ## Legenda
 
