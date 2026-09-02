@@ -30,6 +30,7 @@ correspondente e o ciclo ativo.
 | 019 | [#46](https://github.com/isaquepinheiro/ModernSyntax/issues/46) | TModernRTTIArrayType + TModernRTTISetType nos dois compiladores; Length levanta em dinamico; helpers ArrayRaiseWrongKind/SetRaiseWrongKind; quatro cenarios compartilhados; duas mutacoes obrigatorias com log no PR | 📤 PR aberto — [#54](https://github.com/isaquepinheiro/ModernSyntax/pull/54) |
 | 020 | [#49](https://github.com/isaquepinheiro/ModernSyntax/issues/49) | Contrato unico de handle nil em TModernRTTIType — cinco guardas (Name/GetProperties/GetFields/GetMethods/GetMethod); EModernRTTIError + SModernRTTINilHandle; XMLDocs; cenario NilHandle_AllMembers_Raises; desbloqueio D-44.6 | 📤 PR aberto — [#55](https://github.com/isaquepinheiro/ModernSyntax/pull/55) |
 | 021 | [#56](https://github.com/isaquepinheiro/ModernSyntax/issues/56) | TModernRTTIType.Attributes fora do contrato nil da #49 — guarda em PropAttributes; uniformizacao dos cinco blocos (Pos → igualdade estrita); sexto bloco Attributes em Scenario_NilHandle_AllMembers_Raises | 📤 PR aberto — [#58](https://github.com/isaquepinheiro/ModernSyntax/pull/58) |
+| 022 | [#51](https://github.com/isaquepinheiro/ModernSyntax/issues/51) | Fix: else raise nos dois sites de Visibility do backend Delphi — resourcestring privada SDelphiUnknownVisibility + else raise em MethodVisibility e PropertyVisibility + reescrita de 2 comentarios + reescrita de 1 XML-doc. Dois arquivos, commit unico. | 🔄 in-review |
 
 ## Legenda
 

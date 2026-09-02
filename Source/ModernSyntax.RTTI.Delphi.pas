@@ -153,6 +153,16 @@ resourcestring
     'TModernRTTIArrayType.Length: nao suportado para arrays dinamicos.';
   SSetWrongKind =
     'TModernRTTISetType: TypeInfo does not describe a set type (Kind <> tkSet).';
+  // Issue #51 — D-51.3 do ADR. resourcestring PRIVADA na implementation
+  // (padrao vigente do repo: SFPCNoVisibility / SFPCNoReturnType / SEnum*).
+  // NAO promover para a interface: o ramo `else raise` que a consome e
+  // inalcancavel por dado real com o RTL atual (`TMemberVisibility` do
+  // Delphi tem 4 valores em System.TypInfo.pas:232) e nenhum teste externo
+  // referencia esta mensagem. Contraste com PR #58 (SModernRTTINilHandle
+  // foi promovida porque um cenario em outra unit compara por igualdade).
+  SDelphiUnknownVisibility =
+    'TMemberVisibility desconhecido (Ord=%d) em %s — ' +
+    'TModernVisibility precisa de novo ramo (issue #51).';
 
 // --- TValueOps ---------------------------------------------------------------
 
@@ -296,12 +306,29 @@ end;
 
 function MethodVisibility(AOwner: TClass; AToken: Pointer): TModernVisibility;
 begin
-  // D-42.2 do ADR issue #42: `case` explicito de EXATAMENTE 4 ramos
-  // (`mvPrivate`, `mvProtected`, `mvPublic`, `mvPublished`). SEM ramo
-  // `mvAutomated` (opcao (b) do revisor — D-42.3): se o
-  // `TMemberVisibility` do Delphi tiver esse ou qualquer outro valor
-  // adicional, o compilador acusa erro no primeiro build. Nunca
-  // `TModernVisibility(Ord(...))` — silencia valor novo em runtime.
+  // D-51.1 do ADR issue #51: `case` explicito de 4 ramos (`mvPrivate`,
+  // `mvProtected`, `mvPublic`, `mvPublished`) + `else raise
+  // EModernRTTIError`. Substitui parcialmente D-42.2 do ADR issue #42:
+  // intencao fail-loud preservada; mecanismo trocado.
+  //
+  // Medido nos 4 alvos (Delphi 23.0/37.0 x Win32/Win64, run
+  // 2e4913d83ea2e1f06b3d8e8589bcbc4f): Delphi NAO faz analise de
+  // exaustividade em `case` sobre enum. `case` sem `else` emite W1035 e,
+  // em runtime, devolve lixo indeterminado no `Result` (ordinal 204/16/
+  // 252/16 por bitness — 3 valores distintos em 4 alvos). W1035 morre
+  // igualmente com `else` que faz cast e com `else` que levanta — o
+  // criterio de desempate NAO e o warning, e sim fail-loud vs.
+  // errado-em-silencio:
+  //   - `else TModernVisibility(Ord(...))` — ordinal 4 deterministico, MUDO.
+  //   - `else raise EModernRTTIError`      — mensagem nomeando ordinal +
+  //     funcao, ALTA. Unica opcao que entrega a intencao de D-42.2.
+  //
+  // O ramo `else` e inalcancavel por dado real hoje (`TMemberVisibility`
+  // do Delphi tem 4 valores em `System.TypInfo.pas:232`); por isso D-51.7
+  // dispensa cenario novo de teste. `Ord(...)` recebe
+  // `TRttiMethod(AToken).Visibility` — o `TMemberVisibility` do RTL, nao
+  // o `TModernVisibility` da casca — para reportar o ordinal REAL que o
+  // RTL passou.
   //
   // Case labels QUALIFICADOS com `TMemberVisibility.` (do RTL), Result
   // com `TModernVisibility.` (da casca), porque os dois enums declaram
@@ -312,21 +339,42 @@ begin
     TMemberVisibility.mvProtected: Result := TModernVisibility.mvProtected;
     TMemberVisibility.mvPublic:    Result := TModernVisibility.mvPublic;
     TMemberVisibility.mvPublished: Result := TModernVisibility.mvPublished;
+  else
+    raise EModernRTTIError.CreateFmt(
+      SDelphiUnknownVisibility,
+      [Ord(TRttiMethod(AToken).Visibility), 'MethodVisibility']);
   end;
 end;
 
 function PropertyVisibility(AToken: Pointer): TModernVisibility;
 begin
-  // D-42.2 + D-42.4 do ADR issue #42: mesmo `case` de 4 ramos sobre
-  // `TRttiProperty.Visibility`, dado real nos dois compiladores.
+  // D-51.1 do ADR issue #51: mesmo `case` de 4 ramos sobre
+  // `TRttiProperty.Visibility` + `else raise EModernRTTIError` (mesmo
+  // framing do sitio `MethodVisibility`: W1035 morre igualmente com
+  // cast e com raise; o criterio de desempate e fail-loud vs.
+  // errado-em-silencio — lixo 204/16/252/16 medido nos 4 alvos, run
+  // 2e4913d83ea2e1f06b3d8e8589bcbc4f). Substitui parcialmente D-42.2 +
+  // D-42.4 do ADR issue #42: intencao fail-loud preservada; mecanismo
+  // trocado.
+  //
   // `TRttiProperty` e auto-contido — parametro unico (AToken); simetria
   // formal com `MethodVisibility(AOwner, AToken)` seria ruido (AOwner
-  // ficaria morto). D-42.6 do ADR.
+  // ficaria morto). D-51.5 do ADR (preserva D-42.6). Por isso a mensagem
+  // usa `%s` com o nome da funcao — nao com o owner.
+  //
+  // `Ord(...)` recebe `TRttiProperty(AToken).Visibility` (o
+  // `TMemberVisibility` do RTL), para reportar o ordinal REAL que o RTL
+  // passou. Ramo `else` inalcancavel por dado real com o RTL atual
+  // (D-51.7).
   case TRttiProperty(AToken).Visibility of
     TMemberVisibility.mvPrivate:   Result := TModernVisibility.mvPrivate;
     TMemberVisibility.mvProtected: Result := TModernVisibility.mvProtected;
     TMemberVisibility.mvPublic:    Result := TModernVisibility.mvPublic;
     TMemberVisibility.mvPublished: Result := TModernVisibility.mvPublished;
+  else
+    raise EModernRTTIError.CreateFmt(
+      SDelphiUnknownVisibility,
+      [Ord(TRttiProperty(AToken).Visibility), 'PropertyVisibility']);
   end;
 end;
 
