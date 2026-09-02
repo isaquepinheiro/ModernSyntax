@@ -29,6 +29,7 @@ correspondente e o ciclo ativo.
 | 018 | [#45](https://github.com/isaquepinheiro/ModernSyntax/issues/45) | TModernRTTIRecordType com Name + Size nos dois compiladores; duas fixtures obrigatorias (TRecordFixture45 unmanaged + TRecordFixture45M managed); helper RecordRaiseWrongKind; issue-filha GetFields fora do commit | 📤 PR aberto — [#52](https://github.com/isaquepinheiro/ModernSyntax/pull/52) |
 | 019 | [#46](https://github.com/isaquepinheiro/ModernSyntax/issues/46) | TModernRTTIArrayType + TModernRTTISetType nos dois compiladores; Length levanta em dinamico; helpers ArrayRaiseWrongKind/SetRaiseWrongKind; quatro cenarios compartilhados; duas mutacoes obrigatorias com log no PR | 📤 PR aberto — [#54](https://github.com/isaquepinheiro/ModernSyntax/pull/54) |
 | 020 | [#49](https://github.com/isaquepinheiro/ModernSyntax/issues/49) | Contrato unico de handle nil em TModernRTTIType — cinco guardas (Name/GetProperties/GetFields/GetMethods/GetMethod); EModernRTTIError + SModernRTTINilHandle; XMLDocs; cenario NilHandle_AllMembers_Raises; desbloqueio D-44.6 | 📤 PR aberto — [#55](https://github.com/isaquepinheiro/ModernSyntax/pull/55) |
+| 021 | [#56](https://github.com/isaquepinheiro/ModernSyntax/issues/56) | TModernRTTIType.Attributes fora do contrato nil da #49 — guarda em PropAttributes; uniformizacao dos cinco blocos (Pos → igualdade estrita); sexto bloco Attributes em Scenario_NilHandle_AllMembers_Raises | 🔄 in-review |
 
 ## Legenda
 
@@ -163,6 +164,17 @@ em `Name`, `GetProperties`, `GetFields` (antes do `is TRttiInstanceType` check),
 `Scenario_NilHandle_AllMembers_Raises` em `UScenarios.RTTI.pas` com cinco blocos
 try/except verificando mensagem por `Pos`; desbloqueio D-44.6 em
 `Scenario_PointerType_ReferredType_Nil_ForBarePointer`; duas cascas de uma linha (FPC e Delphi).
+
+**Ciclo 021** — MAESTRO MODE. A issue #56 é a demanda oficial deste ciclo
+(intake do maestro: `aefos:running`). Nenhuma issue ou Epic adicional criada.
+Demanda: estender o contrato de nil-handle da #49 para `TModernRTTIType.Attributes`
+— inserir guarda `if FType = nil then raise EModernRTTIError.CreateFmt(SModernRTTINilHandle, ['Attributes'])`
+como primeira instrucao de `PropAttributes` (antes do `// Issue #27:` e do
+`if (FType is TRttiInstanceType)`); uniformizar os cinco blocos existentes em
+`Scenario_NilHandle_AllMembers_Raises` (trocar `Pos` por igualdade estrita da
+mensagem); inserir sexto bloco para `Attributes` apos o quinto. Dois arquivos,
+commit unico, build FPC 3.2.2 x86_64. Nenhuma `resourcestring` nova — `SModernRTTINilHandle`
+ja existe em linha 892.
 
 **Ciclo 017** — MAESTRO MODE. A issue #44 é a demanda oficial deste ciclo
 (intake do maestro: `aefos:running`). Nenhuma issue ou Epic adicional criada.

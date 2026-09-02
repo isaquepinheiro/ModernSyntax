@@ -1458,8 +1458,8 @@ begin
   end;
   if not LRaised then
     Fail('Name sobre handle nil nao levantou EModernRTTIError.');
-  if Pos('Name', LMsg) = 0 then
-    Fail(Format('Mensagem de Name nao cita o membro chamado: "%s"', [LMsg]));
+  if LMsg <> Format(SModernRTTINilHandle, ['Name']) then
+    Fail(Format('Mensagem de Name incorreta: "%s"', [LMsg]));
 
   // GetProperties
   LRaised := False;
@@ -1475,9 +1475,8 @@ begin
   end;
   if not LRaised then
     Fail('GetProperties sobre handle nil nao levantou EModernRTTIError.');
-  if Pos('GetProperties', LMsg) = 0 then
-    Fail(Format('Mensagem de GetProperties nao cita o membro chamado: "%s"',
-      [LMsg]));
+  if LMsg <> Format(SModernRTTINilHandle, ['GetProperties']) then
+    Fail(Format('Mensagem de GetProperties incorreta: "%s"', [LMsg]));
 
   // GetFields
   LRaised := False;
@@ -1494,8 +1493,8 @@ begin
   if not LRaised then
     Fail('GetFields sobre handle nil nao levantou EModernRTTIError ' +
       '(contrato de nil-handle deve preceder o is TRttiInstanceType check).');
-  if Pos('GetFields', LMsg) = 0 then
-    Fail(Format('Mensagem de GetFields nao cita o membro chamado: "%s"', [LMsg]));
+  if LMsg <> Format(SModernRTTINilHandle, ['GetFields']) then
+    Fail(Format('Mensagem de GetFields incorreta: "%s"', [LMsg]));
 
   // GetMethods
   LRaised := False;
@@ -1511,9 +1510,8 @@ begin
   end;
   if not LRaised then
     Fail('GetMethods sobre handle nil nao levantou EModernRTTIError.');
-  if Pos('GetMethods', LMsg) = 0 then
-    Fail(Format('Mensagem de GetMethods nao cita o membro chamado: "%s"',
-      [LMsg]));
+  if LMsg <> Format(SModernRTTINilHandle, ['GetMethods']) then
+    Fail(Format('Mensagem de GetMethods incorreta: "%s"', [LMsg]));
 
   // GetMethod (singular) — quinto membro (ADR D-49.2)
   LRaised := False;
@@ -1529,9 +1527,25 @@ begin
   end;
   if not LRaised then
     Fail('GetMethod sobre handle nil nao levantou EModernRTTIError.');
-  if Pos('GetMethod', LMsg) = 0 then
-    Fail(Format('Mensagem de GetMethod nao cita o membro chamado: "%s"',
-      [LMsg]));
+  if LMsg <> Format(SModernRTTINilHandle, ['GetMethod']) then
+    Fail(Format('Mensagem de GetMethod incorreta: "%s"', [LMsg]));
+
+  // Attributes (sexto membro — issue #56)
+  LRaised := False;
+  LMsg := '';
+  try
+    LType.Attributes;
+  except
+    on E: EModernRTTIError do
+    begin
+      LRaised := True;
+      LMsg := E.Message;
+    end;
+  end;
+  if not LRaised then
+    Fail('Attributes sobre handle nil nao levantou EModernRTTIError.');
+  if LMsg <> Format(SModernRTTINilHandle, ['Attributes']) then
+    Fail(Format('Mensagem de Attributes incorreta: "%s"', [LMsg]));
 end;
 
 end.
