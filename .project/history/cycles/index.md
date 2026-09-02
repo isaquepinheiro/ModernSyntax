@@ -549,6 +549,29 @@
 - [TEST-REPORT #60 — else raise no PropertyVisibility do backend FPC](/history/cycles/cycle-025-4c9ae8e8/pipeline-test-report.md) — Verificacao dos 10 criterios de aceitacao do ESP #60 e execucao da suite FPC: 42/42 verde.
 - [VERIFY #60 — Static analysis and test gate](/history/cycles/cycle-025-4c9ae8e8/pipeline-verify-report.md) — FPC 3.2.2 compile clean, 42/42 tests green, complexity trivially within CCN 10 threshold. PASSED.
 
+## cycle-026-a2c4f4bd
+- [FLOW-FEEDBACK — Ciclo 026](/history/cycles/cycle-026-a2c4f4bd/FLOW-FEEDBACK.md) — Skill architecture-design nao encontrada; arquiteto operou sem o template de metodo.
+- [REPORT-architect — Ciclo 026 (issue #66)](/history/cycles/cycle-026-a2c4f4bd/REPORT-architect.md) — Arquitetura da correcao documental de RTTI.pas:161-167: remarks falso corrigido, assimetria descrita estruturalmente, ci
+- [REPORT developer #026 — remarks e citacao de ADR de TModernRTTIProperty.Visibility corrigidos](/history/cycles/cycle-026-a2c4f4bd/REPORT-developer.md) — Duas edicoes textuais em Source/ModernSyntax.RTTI.pas (161-168 e 987-992). Zero linha executavel muda. Suite FPC 42/42 v
+- [REPORT-planner — Ciclo 026 (issue #66)](/history/cycles/cycle-026-a2c4f4bd/REPORT-planner.md) — Planner formalizou a demanda documental do ciclo 026: task.md escrito, project-evolution.md atualizado, rastreamento MAE
+- [REPORT-quality-review — Ciclo 026 (issue #66)](/history/cycles/cycle-026-a2c4f4bd/REPORT-quality-review.md) — Revisao de qualidade aprovada: duas edicoes documentais em RTTI.pas conformes com esp.md e ADR D-66; zero linhas executa
+- [REPORT quality-test #026 — Visibility XMLDoc fix aprovado](/history/cycles/cycle-026-a2c4f4bd/REPORT-quality-test.md) — Revisao de qualidade TEST do ciclo 026: todos os criterios de aceitacao atendidos, veredicto APPROVED.
+- [REPORT quality-verify — Cycle 026 / Issue #66](/history/cycles/cycle-026-a2c4f4bd/REPORT-quality-verify.md) — Verify lens: acceptance scan clean, FPC compile 0 errors, 0 new warnings. PASSED.
+- [REPORT-release — Ciclo 026 / Issue #66](/history/cycles/cycle-026-a2c4f4bd/REPORT-release.md) — Closing record: two comment-only edits to Source/ModernSyntax.RTTI.pas correcting false absence assertion and aligning A
+- [Retrospective — Cycle 026 / Issue #66](/history/cycles/cycle-026-a2c4f4bd/REPORT-retrospective.md) — Clean cycle, zero reworks; one flow-feedback flag on missing architect skill registration.
+- [ADR D-66 — Reescrita do remarks publico de TModernRTTIProperty.Visibility (issue #66)](/history/cycles/cycle-026-a2c4f4bd/pipeline-adr.md) — Decisoes acordadas na investigacao da issue #66: forma canonica de citacao, descricao estrutural da assimetria, ancora e
+- [Committer Report — Ciclo 026 / Issue #66](/history/cycles/cycle-026-a2c4f4bd/pipeline-committer-report.md) — Release receipt: branch pushed, PR #67 opened, commit e8b8a1d.
+- [ESP #66 — Corrigir XMLDoc falso de TModernRTTIProperty.Visibility (RTTI.pas:161-167)](/history/cycles/cycle-026-a2c4f4bd/pipeline-esp.md) — Especificacao formal: reescrever o bloco remarks publico e alinhar citacao de ADR no comentario de implementacao; zero l
+- [IMPLEMENT REPORT #66 — remarks de TModernRTTIProperty.Visibility reescrito + citacao ADR alinhada](/history/cycles/cycle-026-a2c4f4bd/pipeline-implement-report.md) — 2 edicoes cirurgicas em Source/ModernSyntax.RTTI.pas (linhas 161-167 e 987-990). Zero linha executavel muda. Suite FPC 4
+- [PLAN #66 — 2 edicoes em 1 arquivo, slice unico](/history/cycles/cycle-026-a2c4f4bd/pipeline-plan.md) — Slice unico: reescrita do remarks publico + alinhamento de citacao ADR. Verdict: fits.
+- [Review Report — Ciclo 026 / Issue #66](/history/cycles/cycle-026-a2c4f4bd/pipeline-review-report.md) — Revisao de qualidade das duas edicoes documentais em Source/ModernSyntax.RTTI.pas: remarks e citacao ADR de TModernRTTIP
+- [SPLIT — Issue #29 em cinco sub-issues, uma por tipo (Visibility, Enumeration, Pointer, Record, Array+Set)](/history/cycles/cycle-026-a2c4f4bd/pipeline-split-proposal.md) — Cinco sub-issues derivadas dos cinco slices do plano. Cada uma stand-alone: propria acceptance, propria mutacao obrigato
+- [SPLIT REPORT — Issue #29 dividida em cinco sub-issues (#42–#46)](/history/cycles/cycle-026-a2c4f4bd/pipeline-split-report.md) — Registro da decomposicao da issue #29 (tipos de categoria RTTI) em cinco sub-issues independentes via GitHub, com fecham
+- [TASK-INPUT #66 — Corrigir remarks falso de TModernRTTIProperty.Visibility](/history/cycles/cycle-026-a2c4f4bd/pipeline-task-input.md) — Handoff operacional: 2 edicoes em 1 arquivo Pascal (remarks publico + citacao ADR), um commit, varredura de aceitacao po
+- [TASK #66 — Corrigir remarks falso de TModernRTTIProperty.Visibility](/history/cycles/cycle-026-a2c4f4bd/pipeline-task.md) — 2 edicoes documentais em RTTI.pas: reescrever remarks de Visibility (161-167) e atualizar citacao de ADR (987-990); zero
+- [Test Report #026 — TModernRTTIProperty.Visibility XMLDoc fix (issue #66)](/history/cycles/cycle-026-a2c4f4bd/pipeline-test-report.md) — Resultado da revisao de qualidade TEST do ciclo 026: dois criterios de aceitacao textuais, grep de varredura e suite FPC
+- [VERIFY REPORT #66 — Static analysis + acceptance scan + FPC compile](/history/cycles/cycle-026-a2c4f4bd/pipeline-verify-report.md) — Cycle-026 verify: 0 contaminated assertions, 0 compile errors, 9 pre-existing warnings unchanged.
+
 ## cycle-026-0ed0e9cf
 - [REPORT-architect — cycle-026 — 10 correcoes de texto no bundle OKF](/history/cycles/cycle-026-0ed0e9cf/REPORT-architect.md) — O arquiteto produziu esp, adr, plan e task-input para as 10 edicoes de texto no bundle .project/analysis/; 2 itens verif
 - [REPORT-developer — cycle-026 — 10 correcoes de texto no bundle OKF](/history/cycles/cycle-026-0ed0e9cf/REPORT-developer.md) — Developer aplicou as 10 edicoes de texto em 4 arquivos de .project/analysis/; pre/pos-scan zero; Source/ intacto; um com

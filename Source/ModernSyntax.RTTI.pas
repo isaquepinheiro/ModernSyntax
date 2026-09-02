@@ -160,10 +160,12 @@ type
     /// </summary>
     /// <remarks>
     ///   Assimetria deliberada com `TModernRTTIMethod.Visibility` (que
-    ///   NO FPC levanta): aqui NAO ha raise no FPC. A visibilidade de
-    ///   propriedades esta no caminho da RTL nos dois lados, entao a
-    ///   casca devolve o valor mapeado por `case` explicito de 4 ramos
-    ///   (D-42.2 do ADR issue #42), sem depender de `Ord`.
+    ///   no FPC levanta SEMPRE — o dado nao existe no `vmtMethodTable`):
+    ///   aqui o levantamento ocorre APENAS no ramo `else` do `case`,
+    ///   inalcancavel com o `TMemberVisibility` atual (4 valores,
+    ///   `rtti.pp:308`). Para todo dado real devolve o valor mapeado
+    ///   por `case` explicito de 4 ramos, sem depender de `Ord`
+    ///   (D-42.2/D-51.1/D-60.1 do ADR issues #42/#51/#60).
     /// </remarks>
     function Visibility: TModernVisibility;
     // Construtor interno usado pela unit; nao faz parte da API publica.
@@ -986,7 +988,7 @@ function TModernRTTIProperty.Visibility: TModernVisibility;
 begin
   // Delega ao backend. Nos DOIS compiladores devolve dado real via
   // `case` explicito de 4 ramos sobre `TRttiProperty(AToken).Visibility`
-  // (D-42.2 do ADR issue #42). `FProp` esta em `strict private` mas visivel
+  // (D-42.2/D-51.1/D-60.1 do ADR issues #42/#51/#60). `FProp` esta em `strict private` mas visivel
   // na `implementation` da mesma unit — passamos como `Pointer(FProp)`
   // para casar com a assinatura crua dos backends.
   Result := PropertyVisibility(Pointer(FProp));
