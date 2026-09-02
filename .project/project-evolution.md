@@ -34,6 +34,7 @@ correspondente e o ciclo ativo.
 | 023 | [#57](https://github.com/isaquepinheiro/ModernSyntax/issues/57) | chore: corrige quatro residuos de documentacao/teste dos ciclos #45 e #46 — comentario TCor (A), comentario TRecordFixture45M (B), cenario 7 com assercao de identidade (C), remocao de comentario fantasma em RTTI.FPC.pas (D). Dois arquivos, commit unico, mutacao obrigatoria. | 📤 PR aberto — [#61](https://github.com/isaquepinheiro/ModernSyntax/pull/61) |
 | 024 | [#62](https://github.com/isaquepinheiro/ModernSyntax/issues/62) | "docs(rtti): corrigir XMLDoc TModernVisibility, remarks Attributes e comentarios do cenario NilHandle — sete edicoes em 4 arquivos Pascal, nenhuma linha executavel muda." | 📤 PR aberto — [#63](https://github.com/isaquepinheiro/ModernSyntax/pull/63) |
 | 025 | [#60](https://github.com/isaquepinheiro/ModernSyntax/issues/60) | "fix(rtti-fpc): else raise EModernRTTIError no PropertyVisibility do backend FPC — resourcestring SFPCUnknownVisibility + guarda fail-loud + comentario reescrito + XMLDoc corrigido. 4 edicoes em 2 arquivos." | 📤 PR aberto — [#65](https://github.com/isaquepinheiro/ModernSyntax/pull/65) |
+| 026 | [#6](https://github.com/isaquepinheiro/ModernSyntax/issues/6) | chore(docs): corrigir 10 itens de texto no bundle OKF — numeros divergentes e ancoras fora do lugar em 4 arquivos de analise; 1 commit; zero mudancas em Source/ | 🔄 in-review |
 
 ## Legenda
 
@@ -200,6 +201,13 @@ ordinal 229/i386, 0 = `mvPrivate`/x86_64) como razão histórica; corrigir o XML
 `TModernVisibility` em `Source/ModernSyntax.RTTI.pas:79–85` para refletir que ambos
 os backends levantam `EModernRTTIError` após as guardas. Supercede D-51.8. 4 edições
 em 2 arquivos, build FPC 3.2.2 x86_64 obrigatório, contagem de testes permanece 42.
+
+**Ciclo 026** — MAESTRO MODE. A issue #6 é a demanda oficial deste ciclo
+(intake do maestro: `aefos:investigated`). Nenhuma issue ou Epic adicional criada.
+Demanda: aplicar 10 correções de texto em `.project/analysis/` — números divergentes
+e âncoras fora do lugar em 4 arquivos (`03-architecture.md`, `02-stack.md`,
+`04-domain.md`, `05-conventions.md`); itens 11 e `.inc` verificados sem edição;
+1 commit; zero mudanças em `Source/`.
 
 **Ciclo 017** — MAESTRO MODE. A issue #44 é a demanda oficial deste ciclo
 (intake do maestro: `aefos:running`). Nenhuma issue ou Epic adicional criada.
