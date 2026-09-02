@@ -145,20 +145,22 @@ convention.
 ### 2.5 Memory ownership — `TResultPair.Dispose`
 
 `TResultPair<S,F>` is the **owner** of the objects carried on either rail when `S` or `F`
-is a class type. `Dispose` (`ResultPair.pas:586`) unconditionally calls both
-`_DestroySuccess` (`ResultPair.pas:593`) and `_DestroyFailure` (`ResultPair.pas:597`).
-Each destroyer checks `TypeInfo(S).Kind = tkClass` and calls `.Free` on the boxed object
-(`ResultPair.pas:599–605`). This means:
+is a class type. `Dispose` (`ResultPair.pas:622`) unconditionally calls both
+`_DestroySuccess` (`ResultPair.pas:581`) and `_DestroyFailure` (`ResultPair.pas:666`).
+Each destroyer checks `TypeInfo(S).Kind = tkClass` and calls `.Free` on the boxed object.
+This means:
 
 - A consumer who passes a class instance to `.Success(obj)` or `.Failure(obj)` transfers
   ownership. The object will be freed when `Dispose` is called.
 - `Dispose` frees **both** rails regardless of which is set — a container in `rtSuccess`
-  state still calls `_DestroyFailure`, which is safe only because `FFailure` is nil-guarded
-  (`ResultPair.pas:593`: `if @FFailure = nil then Exit`).
+  state still calls `_DestroyFailure`, which is safe because the destroyer short-circuits
+  when the rail was never populated (`ResultPair.pas:676`: `if not FFailure.HasValue then Exit`).
 - Not calling `Dispose` on a class-typed `TResultPair` leaks the carried object.
   There is no destructor or finalizer (it is a record).
 
-Confirmed: `Source/ModernSyntax.ResultPair.pas:586–610`.
+Confirmed: `Source/ModernSyntax.ResultPair.pas:581, 622, 666`. Positions were updated
+after PR #7 in the `ResultPair.pas` block, which shifted the anchors of
+`_DestroySuccess` and `_DestroyFailure`.
 
 ---
 
@@ -245,7 +247,7 @@ Confirmed at `Source/ModernSyntax.Objects.pas` lines 101–102 (`TSmartPtr<T>`),
 
 Public API is extensively documented with `///` XML-doc triple-slash comments following
 Delphi's `<summary>`, `<param name="...">`, `<returns>`, `<remarks>` schema.
-Measured: `grep -rn '///' Source/ | wc -l` → **1 581** lines carrying doc comments.
+Measured: `grep -rn '///' Source/ | wc -l` → **2 475** (measured 2026-09-02: `grep -rc '///' Source/*.pas`) lines carrying doc comments. Note: unit count in `Source/` grew from 16 to 22 since the initial measurement, which accounts for most of the delta.
 Confirmed at `Source/ModernSyntax.ResultPair.pas` lines 81–90 and
 `Source/ModernSyntax.Option.pas` lines 46–61.
 

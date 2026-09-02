@@ -119,8 +119,8 @@ Measured: `awk '/^uses/{found=1} found{print; if(/;/)exit}' Source/*.pas` — fu
 - `ModernSyntax.Objects` — object extensions/helpers; pure RTL
 
 ### Concurrency
-- `ModernSyntax.Async` — `TScheduler` task scheduler; uses `Threading`, `SyncObjs`
-- `ModernSyntax.Coroutine` — coroutine support; uses `Threading`, `SyncObjs`
+- `ModernSyntax.Async` — `TAsync` (`Async.pas:50`) record wrapping `ITask` from `System.Threading`; uses `Threading`, `SyncObjs`
+- `ModernSyntax.Coroutine` — `TCoroutine` cooperative coroutines driven by `TScheduler` / `IScheduler` (`Coroutine.pas:173`); uses `Threading`, `SyncObjs`
 
 ### Platform / environment
 - `ModernSyntax.DotEnv` — `.env` file parser; imports `Windows` unconditionally
