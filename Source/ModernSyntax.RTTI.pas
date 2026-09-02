@@ -56,6 +56,18 @@ type
   /// </summary>
   EModernRTTIError = class(Exception);
 
+resourcestring
+  /// <summary>
+  ///   Mensagem instrutiva da guarda de nil-handle uniformizada pelos seis
+  ///   membros de TModernRTTIType (Name, GetProperties, GetFields, GetMethods,
+  ///   GetMethod, Attributes — issues #49 e #56). Exposta na interface porque
+  ///   o cenario compartilhado UScenarios.RTTI compara a mensagem por
+  ///   igualdade estrita (D-56.2/D-56.3 do ADR issue #56).
+  /// </summary>
+  SModernRTTINilHandle =
+    'handle nao inicializado (IsNil = True). Verifique IsNil antes de chamar %s.';
+
+type
   /// <summary>
   ///   Enum publico proprio da casca de RTTI para expressar visibilidade de
   ///   membros (issue #42). Substitui `TMemberVisibility` de `TypInfo` na
@@ -889,8 +901,6 @@ resourcestring
     'GetMethods so opera sobre tipo classe; %s nao e TRttiInstanceType.';
   SModernRTTIGetMethodNotClass =
     'GetMethod so opera sobre tipo classe; %s nao e TRttiInstanceType.';
-  SModernRTTINilHandle =
-    'handle nao inicializado (IsNil = True). Verifique IsNil antes de chamar %s.';
 
 { TModernValue }
 
@@ -1123,6 +1133,8 @@ end;
 
 function TModernRTTITypeHelper.PropAttributes: TArray<TObject>;
 begin
+  if FType = nil then
+    raise EModernRTTIError.CreateFmt(SModernRTTINilHandle, ['Attributes']);
   // Issue #27: alias para a coleção ja existente do Pilar 2. Delega direto
   // — a fusao nativa+registrada (Delphi) e a copia de `Owned` (FPC) vivem
   // dentro de `ModernAttributes.GetAttributes`. Nenhum estado novo aqui.
