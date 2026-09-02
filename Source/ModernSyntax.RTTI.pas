@@ -76,13 +76,13 @@ type
   ///   `TMemberVisibility` do Delphi/FPC: `mvPrivate < mvProtected <
   ///   mvPublic < mvPublished`. Se `TMemberVisibility` de algum
   ///   compilador vier a incluir valor adicional (ex.: `mvAutomated` no
-  ///   Delphi), o backend Delphi levanta `EModernRTTIError` no primeiro
-  ///   chamador (D-51.1 do ADR issue #51); no FPC os 4 ramos esgotam o
-  ///   `TMemberVisibility` atual (`rtti.pp:308`), então o `case` sem
-  ///   `else` é correto **hoje** — mas o FPC **tampouco** faz análise
-  ///   de exaustividade: medido no 3.2.2, valor não mapeado compila
-  ///   **sem erro e sem warning** e devolve lixo (229 em i386, 0 em
-  ///   x86_64 — e 0 é `mvPrivate`, um valor plausível). Ver #60.
+  ///   Delphi), os dois backends levantam `EModernRTTIError` no primeiro
+  ///   chamador apos as guardas: Delphi por D-51.1 do ADR issue #51,
+  ///   FPC por D-60.1 do ADR issue #60. Antes das guardas o comportamento
+  ///   observado era: Delphi emitia W1035 e devolvia lixo (204/16/252/16
+  ///   nos 4 alvos); FPC 3.2.2 compilava sem erro, sem warning e sem
+  ///   hint, e o valor nao mapeado vinha como ordinal 229 no i386 e 0
+  ///   no x86_64 — e 0 e `mvPrivate`, um valor semanticamente plausivel.
   /// </summary>
   TModernVisibility = (mvPrivate, mvProtected, mvPublic, mvPublished);
 

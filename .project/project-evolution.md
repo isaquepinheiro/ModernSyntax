@@ -33,6 +33,7 @@ correspondente e o ciclo ativo.
 | 022 | [#51](https://github.com/isaquepinheiro/ModernSyntax/issues/51) | Fix: else raise nos dois sites de Visibility do backend Delphi — resourcestring privada SDelphiUnknownVisibility + else raise em MethodVisibility e PropertyVisibility + reescrita de 2 comentarios + reescrita de 1 XML-doc. Dois arquivos, commit unico. | 📤 PR aberto — [#59](https://github.com/isaquepinheiro/ModernSyntax/pull/59) |
 | 023 | [#57](https://github.com/isaquepinheiro/ModernSyntax/issues/57) | chore: corrige quatro residuos de documentacao/teste dos ciclos #45 e #46 — comentario TCor (A), comentario TRecordFixture45M (B), cenario 7 com assercao de identidade (C), remocao de comentario fantasma em RTTI.FPC.pas (D). Dois arquivos, commit unico, mutacao obrigatoria. | 📤 PR aberto — [#61](https://github.com/isaquepinheiro/ModernSyntax/pull/61) |
 | 024 | [#62](https://github.com/isaquepinheiro/ModernSyntax/issues/62) | "docs(rtti): corrigir XMLDoc TModernVisibility, remarks Attributes e comentarios do cenario NilHandle — sete edicoes em 4 arquivos Pascal, nenhuma linha executavel muda." | 📤 PR aberto — [#63](https://github.com/isaquepinheiro/ModernSyntax/pull/63) |
+| 025 | [#60](https://github.com/isaquepinheiro/ModernSyntax/issues/60) | "fix(rtti-fpc): else raise EModernRTTIError no PropertyVisibility do backend FPC — resourcestring SFPCUnknownVisibility + guarda fail-loud + comentario reescrito + XMLDoc corrigido. 4 edicoes em 2 arquivos." | 🔄 in-review |
 
 ## Legenda
 
@@ -187,6 +188,18 @@ nil para `Attributes` em `:427-433`, âncora `Scenario_SetType_ElementType` e
 comentários de seis membros em `UScenarios.RTTI.pas`, e contagem "seis membros
 afetados" nas duas cascas de teste (Delphi `:171`, FPC `:105`). Nenhuma linha
 executável muda. Build FPC 3.2.2 x86_64 obrigatório.
+
+**Ciclo 025** — MAESTRO MODE. A issue #60 é a demanda oficial deste ciclo
+(intake do maestro: `aefos:investigated`). Nenhuma issue ou Epic adicional criada.
+Demanda: aplicar no `PropertyVisibility` de `Source/ModernSyntax.RTTI.FPC.pas` a
+guarda `else raise EModernRTTIError.CreateFmt(SFPCUnknownVisibility, [...])`,
+espelhando o que a #51 / PR #59 fez no Delphi; declarar `resourcestring SFPCUnknownVisibility`
+na `implementation` (prefixo `SFPCUnknown*`, distinto de `SFPCNo*`); reescrever o
+comentário de `PropertyVisibility` descrevendo o comportamento medido (sem warning,
+ordinal 229/i386, 0 = `mvPrivate`/x86_64) como razão histórica; corrigir o XMLDoc de
+`TModernVisibility` em `Source/ModernSyntax.RTTI.pas:79–85` para refletir que ambos
+os backends levantam `EModernRTTIError` após as guardas. Supercede D-51.8. 4 edições
+em 2 arquivos, build FPC 3.2.2 x86_64 obrigatório, contagem de testes permanece 42.
 
 **Ciclo 017** — MAESTRO MODE. A issue #44 é a demanda oficial deste ciclo
 (intake do maestro: `aefos:running`). Nenhuma issue ou Epic adicional criada.
