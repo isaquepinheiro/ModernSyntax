@@ -26,6 +26,7 @@ correspondente e o ciclo ativo.
 | 015 | [#42](https://github.com/isaquepinheiro/ModernSyntax/issues/42) | TModernVisibility publico; fechar vazamento em TModernRTTIMethod.Visibility; adicionar TModernRTTIProperty.Visibility — backends Delphi/FPC, tres cenarios, mutacao de sanidade | 📤 PR aberto — [#47](https://github.com/isaquepinheiro/ModernSyntax/pull/47) |
 | 016 | [#43](https://github.com/isaquepinheiro/ModernSyntax/issues/43) | TModernRTTIEnumerationType com guards M-1/M-2 nos dois backends; seis funcoes livres FPC, paridade Delphi, quatro cenarios compartilhados, mutacao de sanidade | 📤 PR aberto — [#48](https://github.com/isaquepinheiro/ModernSyntax/pull/48) |
 | 017 | [#44](https://github.com/isaquepinheiro/ModernSyntax/issues/44) | TModernRTTIPointerType com ReferredType nos dois compiladores; backend FPC com property RefType e MUTACAO OBRIGATORIA; backend Delphi com paridade; dois cenarios compartilhados; mutacao de sanidade | 🔄 in-review |
+| 018 | [#45](https://github.com/isaquepinheiro/ModernSyntax/issues/45) | TModernRTTIRecordType com Name + Size nos dois compiladores; duas fixtures obrigatorias (TRecordFixture45 unmanaged + TRecordFixture45M managed); helper RecordRaiseWrongKind; issue-filha GetFields fora do commit | 📤 PR aberto — [#52](https://github.com/isaquepinheiro/ModernSyntax/pull/52) |
 
 ## Legenda
 
@@ -125,6 +126,20 @@ Demanda: implementar `TModernRTTIEnumerationType` com seis funções livres nos
 backends FPC e Delphi, guards M-1/M-2, três `resourcestring` novas por backend,
 quatro cenários compartilhados com fixtures `TCor` e `TDia`, mutação de sanidade
 obrigatória. Build FPC 3.2.2 x86_64 e i386 obrigatório.
+
+**Ciclo 018** — MAESTRO MODE. A issue #45 é a demanda oficial deste ciclo
+(intake do maestro: `aefos:investigated`). Nenhuma issue ou Epic adicional criada.
+Demanda: implementar `TModernRTTIRecordType` — record público em
+`Source/ModernSyntax.RTTI.pas` com `strict private FToken: PTypeInfo`, factory
+`FromTypeInfo` sem guarda de Kind, properties `Name` e `Size`; backend FPC com
+`RecordTypeName` (`string(P^.Name)`) e `RecordTypeSize` (`GetTypeData(P)^.RecSize`),
+`resourcestring SRecordWrongKind`, helper `RecordRaiseWrongKind`; backend Delphi com
+paridade — `RecordTypeName` com `LCtx` local e `try/finally`, `RecordTypeSize` direto
+via `GetTypeData`; duas fixtures obrigatórias `TRecordFixture45` (unmanaged) e
+`TRecordFixture45M` (managed); cenário compartilhado com quatro asserções; uma
+procedure por casca. XMLDoc do record com frase-verbatim do acceptance. Issue-filha
+`GetFields` aberta após merge. Fecha `Closes #45`; parte de `#29`. Build FPC 3.2.2
+x86_64 e i386 obrigatório.
 
 **Ciclo 017** — MAESTRO MODE. A issue #44 é a demanda oficial deste ciclo
 (intake do maestro: `aefos:running`). Nenhuma issue ou Epic adicional criada.

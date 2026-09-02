@@ -122,6 +122,11 @@ function EnumGetNames(P: PTypeInfo): TArray<string>;
 
 function PointerTypeReferredType(P: PTypeInfo): TModernRTTIType;
 
+// --- Record (issue #45) ------------------------------------------------------
+
+function RecordTypeName(P: PTypeInfo): string;
+function RecordTypeSize(P: PTypeInfo): Integer;
+
 // --- Context (issue #28) -----------------------------------------------------
 
 function ContextCreate: IModernRTTIContextToken;
@@ -207,6 +212,11 @@ resourcestring
   // PointerTypeReferredType (D-4). Mesma mensagem no backend Delphi.
   SPointerWrongKind =
     'TModernRTTIPointerType: TypeInfo does not describe a pointer type (Kind <> tkPointer).';
+  // Issue #45 — D-45.5/D-45.7 do ADR. resourcestring UNICO no backend
+  // (D-1) para nao vazar para a unit publica. Texto IDENTICO ao do
+  // backend Delphi (D-2/D-43.6). Guarda em RecordRaiseWrongKind.
+  SRecordWrongKind =
+    'TModernRTTIRecordType: TypeInfo does not describe a record type (Kind <> tkRecord).';
 
 // --- TValueOps ---------------------------------------------------------------
 
@@ -583,6 +593,38 @@ begin
   // GetTypeData(P)^.RefType e nil e LCtx.GetType(nil) retorna nil,
   // caindo em TModernRTTIType.IsNil = True sem levantar.
   Result := TModernRTTIType.FromRtti(LCtx.GetType(GetTypeData(P)^.RefType));
+end;
+
+// --- Record (issue #45) ------------------------------------------------------
+
+// Helper unificado (D-45.5) — padrao consagrado do modulo (EnumRaiseWrongKind
+// :473 / issue #43). Guarda EXCLUSIVAMENTE por nil ou Kind — SEM condicao
+// sobre Size (D-45.8): `record end` (Size = 0) e valido nos seis alvos e
+// nao pode ser rejeitado. Cada funcao publica chama o helper como primeira
+// instrucao. Preparado para receber `GetFields` da issue-filha sem duplicar
+// guarda inline.
+procedure RecordRaiseWrongKind(P: PTypeInfo);
+begin
+  if (P = nil) or (P^.Kind <> tkRecord) then
+    raise EModernRTTIError.Create(SRecordWrongKind);
+end;
+
+function RecordTypeName(P: PTypeInfo): string;
+begin
+  // D-4/D-45.3: guarda por Kind aberta em cada funcao (via helper).
+  RecordRaiseWrongKind(P);
+  Result := string(P^.Name);
+end;
+
+function RecordTypeSize(P: PTypeInfo): Integer;
+begin
+  // D-4/D-45.3: guarda por Kind aberta em cada funcao (via helper).
+  // RecSize e o campo canonico do TTypeData para records. NAO usar
+  // ManagedFldCount para derivar nada (D-45.7): medicao mostra que o
+  // campo mente para tkRecord puro (TPlain com zero campos managed
+  // retorna ManagedFldCount = 2 — leitura da uniao).
+  RecordRaiseWrongKind(P);
+  Result := GetTypeData(P)^.RecSize;
 end;
 
 // --- Context (issue #28) -----------------------------------------------------

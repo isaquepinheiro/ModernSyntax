@@ -100,6 +100,11 @@ function EnumGetNames(P: PTypeInfo): TArray<string>;
 
 function PointerTypeReferredType(P: PTypeInfo): TModernRTTIType;
 
+// --- Record (issue #45) ------------------------------------------------------
+
+function RecordTypeName(P: PTypeInfo): string;
+function RecordTypeSize(P: PTypeInfo): Integer;
+
 // --- Context (issue #28) -----------------------------------------------------
 
 function ContextCreate: IModernRTTIContextToken;
@@ -126,6 +131,11 @@ resourcestring
   // erros e identico por construcao (D-2/D-44.4).
   SPointerWrongKind =
     'TModernRTTIPointerType: TypeInfo does not describe a pointer type (Kind <> tkPointer).';
+  // Issue #45 — D-45.5/D-45.7 do ADR. resourcestring local no backend
+  // (padrao vigente do repo, D-1). Texto DUPLICADO com o do backend FPC
+  // por paridade de mensagem (D-2/D-43.6).
+  SRecordWrongKind =
+    'TModernRTTIRecordType: TypeInfo does not describe a record type (Kind <> tkRecord).';
 
 // --- TValueOps ---------------------------------------------------------------
 
@@ -478,6 +488,46 @@ begin
   finally
     LCtx.Free;
   end;
+end;
+
+// --- Record (issue #45) ------------------------------------------------------
+
+// Helper unificado (D-45.5) — paridade estrita com o backend FPC. Guarda
+// EXCLUSIVAMENTE por nil ou Kind — SEM condicao sobre Size (D-45.8):
+// `record end` (Size = 0) e valido nos quatro alvos Delphi e nao pode ser
+// rejeitado. Mesma mensagem do backend FPC (D-2/D-43.6).
+procedure RecordRaiseWrongKind(P: PTypeInfo);
+begin
+  if (P = nil) or (P^.Kind <> tkRecord) then
+    raise EModernRTTIError.Create(SRecordWrongKind);
+end;
+
+function RecordTypeName(P: PTypeInfo): string;
+var
+  LCtx: TRttiContext;
+begin
+  // D-4/D-45.6: paridade estrita com FPC. Guarda por Kind aberta antes
+  // de qualquer delegacao. LCtx LOCAL com try/finally (padrao EnumMinValue
+  // :364-377) — nao FContext global (acopla initialization order).
+  // Delegacao a TRttiRecordType.Name mantida como seguranca para o caso
+  // generico/aninhado; a medicao do Diretor cobriu records simples nos 4
+  // alvos Delphi e a delegacao vira a rede para o que nao foi medido.
+  RecordRaiseWrongKind(P);
+  LCtx := TRttiContext.Create;
+  try
+    Result := TRttiRecordType(LCtx.GetType(P)).Name;
+  finally
+    LCtx.Free;
+  end;
+end;
+
+function RecordTypeSize(P: PTypeInfo): Integer;
+begin
+  // D-4/D-45.6: guarda por Kind aberta em cada funcao. NAO cria contexto:
+  // GetTypeData(P)^.RecSize direto (paridade objetiva com o FPC; mais
+  // barato que TRttiType.TypeSize, permitido pela issue como equivalente).
+  RecordRaiseWrongKind(P);
+  Result := GetTypeData(P)^.RecSize;
 end;
 
 // --- Context (issue #28) -----------------------------------------------------
