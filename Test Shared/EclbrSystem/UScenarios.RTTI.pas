@@ -218,6 +218,37 @@ type
     I: Integer;
   end;
 
+  // Fixtures para issue #46 (TModernRTTIArrayType + TModernRTTISetType).
+  // Declaracoes na secao `type` da `interface` (D-5) para que os cenarios
+  // e as duas cascas de teste enxerguem o mesmo tipo.
+  //
+  // Cenario 7 (array estatico) — Length = 5, Size = SizeOf(TArr5Int46).
+  // Serve para provar `Length` no estatico e a paridade `ArrayData.Size`
+  // entre os dois backends.
+  TArr5Int46 = array[0..4] of Integer;
+
+  // Cenario 8 (array dinamico UNMANAGED) — mata Mutacao 1 (D-46.7 / D-46.9):
+  // trocar `elType2` por `elType` daria AV porque `array of Byte`
+  // (unmanaged) tem `elType = NIL`, e o acesso posterior a `.Name` sobre
+  // nil AVs. Alem disso, `elSize = 1` diverge de `SizeOf(Pointer)` nos
+  // DOIS bitness (i386: 4!=1; x86_64: 8!=1) — asserção `Size = 1` mata a
+  // mutacao `elSize -> SizeOf(Pointer)` sozinha em cada bitness. NAO
+  // trocar para `TDynIntArr46 = array of Integer`: em i386, elSize = 4
+  // empataria com SizeOf(Pointer) = 4.
+  TDynByteArr46 = array of Byte;
+
+  // Cenario 9 (array dinamico MANAGED) — cobre o path gerenciado (elType
+  // do gerenciado nao e nil). Comparacao de `ElementType.Name` por
+  // REFERENCIA (FPC devolve `AnsiString`, Delphi devolve `string` — D-46.8
+  // absorve a divergencia). NAO cobre Mutacao 1 (D-46.9): trocar `elType2`
+  // por `elType` faria este cenario passar VERDE com o codigo errado.
+  TDynStrArr46 = array of string;
+
+  // Cenario 10 (set) — mata Mutacao 2 (D-46.5 / D-46.9): trocar `CompType`
+  // por `PTypeInfo(CompTypeRef)` le regiao errada da uniao (AV ou nome
+  // lixo). Reusa `TCor = (cA, cB, cC)` ja declarado (:146).
+  TSetCor46 = set of TCor;
+
 procedure Scenario_GetProperties_ReturnsPublishedProps;
 procedure Scenario_GetValue_Integer_Roundtrip;
 procedure Scenario_GetValue_String_Roundtrip;
@@ -287,6 +318,15 @@ procedure Scenario_PointerType_ReferredType_Nil_ForBarePointer;
 // a constante 8. So por igualdade (`Size = SizeOf(T)`) — desigualdade
 // `>=` nao prova nada contra backend constante.
 procedure Scenario_RecordType_NameAndSize;
+// Cenarios da issue #46 — TModernRTTIArrayType + TModernRTTISetType.
+// Quatro cenarios compartilhados (D-7 "um cenario, duas cascas"). Duas
+// mutacoes obrigatorias (D-46.9): Mutacao 1 cai no cenario 8 (unmanaged);
+// Mutacao 2 cai no cenario 10. Cenario 9 (managed) NAO promete cobrir
+// Mutacao 1.
+procedure Scenario_ArrayType_Static_LengthAndSize;
+procedure Scenario_ArrayType_Dynamic_LengthRaises;
+procedure Scenario_ArrayType_Dynamic_Managed_ElementType;
+procedure Scenario_SetType_ElementType;
 
 implementation
 
@@ -1253,6 +1293,111 @@ begin
     Fail('Name(TRecordFixture45M) inesperado.');
   if LRecM.Size <> SizeOf(TRecordFixture45M) then
     Fail('Size(TRecordFixture45M) != SizeOf(TRecordFixture45M).');
+end;
+
+// --- Issue #46 — TModernRTTIArrayType + TModernRTTISetType -------------------
+
+procedure Scenario_ArrayType_Static_LengthAndSize;
+var
+  LArr: TModernRTTIArrayType;
+begin
+  // Cenario 7: array estatico. Quatro asserções fixando as duas
+  // propriedades observaveis (Length, Size) + IsDynamic = False +
+  // ElementType nao nulo.
+  //
+  // So por IGUALDADE: `Length = 5`, `Size = SizeOf(TArr5Int46)`.
+  // Desigualdade `>=` nao prova nada contra backend constante.
+  LArr := TModernRTTIArrayType.FromTypeInfo(TypeInfo(TArr5Int46));
+  if LArr.IsDynamic then
+    Fail('TArr5Int46 nao deveria ser dinamico (IsDynamic = True).');
+  if LArr.Length <> 5 then
+    Fail(Format('Length(TArr5Int46) devolveu %d; esperado 5.', [LArr.Length]));
+  if LArr.Size <> SizeOf(TArr5Int46) then
+    Fail(Format('Size(TArr5Int46) devolveu %d; esperado SizeOf(TArr5Int46) = %d.',
+      [LArr.Size, SizeOf(TArr5Int46)]));
+  if LArr.ElementType.IsNil then
+    Fail('ElementType(TArr5Int46) IsNil — esperava handle valido para Integer.');
+end;
+
+procedure Scenario_ArrayType_Dynamic_LengthRaises;
+var
+  LArr: TModernRTTIArrayType;
+  LRaised: Boolean;
+begin
+  // Cenario 8: array dinamico UNMANAGED. Carrega QUATRO asserções — NAO
+  // simplificar para "so raises". As tres outras (IsDynamic, ElementType
+  // por referencia, Size = 1) sao o que mata as mutacoes.
+  //
+  // MUTACAO 1 obrigatoria (D-46.9): trocar `elType2` por `elType` em
+  // ArrayTypeElementType(FPC) daria AV aqui (Byte unmanaged tem
+  // elType = nil, acesso a `.Name` sobre nil AVs). Log do cenario 8 vai
+  // ao PR.
+  //
+  // Mutacao `elSize -> SizeOf(Pointer)`: `Size = 1` diverge de
+  // SizeOf(Pointer) nos dois bitness (i386: 4!=1; x86_64: 8!=1) — mata
+  // sozinha em cada bitness (D-46.7).
+  LArr := TModernRTTIArrayType.FromTypeInfo(TypeInfo(TDynByteArr46));
+  if not LArr.IsDynamic then
+    Fail('TDynByteArr46 deveria ser dinamico (IsDynamic = False).');
+  LRaised := False;
+  try
+    LArr.Length;
+  except
+    on E: EModernRTTIError do LRaised := True;
+  end;
+  if not LRaised then
+    Fail('Length em array dinamico nao levantou EModernRTTIError ' +
+      '(B-46.2 / D-46.2: paridade semantica quebrada).');
+  // Comparacao por REFERENCIA (D-46.8): FPC/Delphi divergem no literal
+  // para tipos como `string` (AnsiString vs string). Para `Byte` o
+  // literal seria estavel, mas mantemos o padrao para simetria com o
+  // cenario 9 e 10, e para que a mutacao 1 (elType2 -> elType) morra
+  // no acesso a `.Name` sobre nil.
+  if LArr.ElementType.Name <> TModernRTTI.GetType(TypeInfo(Byte)).Name then
+    Fail('ElementType(TDynByteArr46).Name != Byte.Name por referencia ' +
+      '(Mutacao 1: elType2 -> elType daria AV em unmanaged).');
+  if LArr.Size <> 1 then
+    Fail(Format('Size(TDynByteArr46) devolveu %d; esperado 1 (elSize de Byte). ' +
+      'Mutacao elSize -> SizeOf(Pointer) diverge em qualquer bitness (i386: 4; x86_64: 8).',
+      [LArr.Size]));
+end;
+
+procedure Scenario_ArrayType_Dynamic_Managed_ElementType;
+var
+  LArr: TModernRTTIArrayType;
+begin
+  // Cenario 9: array dinamico MANAGED. Cobre o path gerenciado (elType do
+  // gerenciado NAO e nil — array of string tem elType^.Name valido).
+  //
+  // Este cenario NAO promete cobrir Mutacao 1 (D-46.9): trocar `elType2`
+  // por `elType` faria este cenario passar VERDE com o codigo errado
+  // (elType do gerenciado resolve para o mesmo tipo). O log da Mutacao 1
+  // e do cenario 8 sobre TDynByteArr46.
+  //
+  // Comparacao por REFERENCIA (D-46.8): FPC devolve `AnsiString`, Delphi
+  // devolve `string` — literal quebra num dos dois.
+  LArr := TModernRTTIArrayType.FromTypeInfo(TypeInfo(TDynStrArr46));
+  if not LArr.IsDynamic then
+    Fail('TDynStrArr46 deveria ser dinamico (IsDynamic = False).');
+  if LArr.ElementType.Name <> TModernRTTI.GetType(TypeInfo(string)).Name then
+    Fail('ElementType(TDynStrArr46).Name != string.Name por referencia ' +
+      '(FPC=AnsiString, Delphi=string absorvidos via referencia).');
+end;
+
+procedure Scenario_SetType_ElementType;
+var
+  LSet: TModernRTTISetType;
+begin
+  // Cenario 10: set of TCor. MUTACAO 2 obrigatoria (D-46.9): trocar
+  // `CompType` por `PTypeInfo(CompTypeRef)` em SetTypeElementType(FPC) le
+  // regiao errada da uniao (AV ou nome lixo). Log do cenario 10 vai ao PR.
+  //
+  // Comparacao por REFERENCIA (D-46.8) — mesma disciplina dos cenarios
+  // 8/9 e do Scenario_PointerType_ReferredType_Matches (:1210).
+  LSet := TModernRTTISetType.FromTypeInfo(TypeInfo(TSetCor46));
+  if LSet.ElementType.Name <> TModernRTTI.GetType(TypeInfo(TCor)).Name then
+    Fail('ElementType(TSetCor46).Name != TCor.Name por referencia ' +
+      '(Mutacao 2: CompType -> CompTypeRef le regiao errada).');
 end;
 
 end.
