@@ -309,11 +309,17 @@ begin
         TypeInfo(TDateAndTag)
       );
     except
-      on E: Exception do
+      { A CLASSE e a assertiva; a mensagem e conferencia secundaria.
+        Capturar 'Exception' e olhar so o texto deixa passar qualquer
+        excecao generica com texto parecido — exigido no plan-gate. }
+      on E: ENotImplemented do
       begin
         raised := True;
         msg := E.Message;
       end;
+      on E: Exception do
+        Fail('classe inesperada no alvo sem SystemInvoke: ' +
+          E.ClassName + ' | ' + E.Message);
     end;
     if not raised then
       Fail('esperava ENotImplemented da RTL em alvo FPC sem SystemInvoke');
@@ -355,11 +361,17 @@ begin
     try
       v := TModernInvoker.Invoke(o, 'GimmeAngle', [], TypeInfo(Double));
     except
-      on E: Exception do
+      { A CLASSE e a assertiva; a mensagem e conferencia secundaria.
+        Capturar 'Exception' e olhar so o texto deixa passar qualquer
+        excecao generica com texto parecido — exigido no plan-gate. }
+      on E: ENotImplemented do
       begin
         raised := True;
         msg := E.Message;
       end;
+      on E: Exception do
+        Fail('classe inesperada no alvo sem SystemInvoke: ' +
+          E.ClassName + ' | ' + E.Message);
     end;
     if not raised then
       Fail('esperava ENotImplemented da RTL em alvo FPC sem SystemInvoke');
@@ -399,11 +411,17 @@ begin
         TypeInfo(string)
       );
     except
-      on E: Exception do
+      { A CLASSE e a assertiva; a mensagem e conferencia secundaria.
+        Capturar 'Exception' e olhar so o texto deixa passar qualquer
+        excecao generica com texto parecido — exigido no plan-gate. }
+      on E: ENotImplemented do
       begin
         raised := True;
         msg := E.Message;
       end;
+      on E: Exception do
+        Fail('classe inesperada no alvo sem SystemInvoke: ' +
+          E.ClassName + ' | ' + E.Message);
     end;
     if not raised then
       Fail('esperava ENotImplemented da RTL em alvo FPC sem SystemInvoke');
@@ -440,11 +458,17 @@ begin
     try
       TModernInvoker.Invoke(o, 'StampNow', [TValue.From<Integer>(6)], nil);
     except
-      on E: Exception do
+      { A CLASSE e a assertiva; a mensagem e conferencia secundaria.
+        Capturar 'Exception' e olhar so o texto deixa passar qualquer
+        excecao generica com texto parecido — exigido no plan-gate. }
+      on E: ENotImplemented do
       begin
         raised := True;
         msg := E.Message;
       end;
+      on E: Exception do
+        Fail('classe inesperada no alvo sem SystemInvoke: ' +
+          E.ClassName + ' | ' + E.Message);
     end;
     if not raised then
       Fail('esperava ENotImplemented da RTL em alvo FPC sem SystemInvoke');
