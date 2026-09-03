@@ -720,21 +720,51 @@ type
   end;
 
   /// <summary>
-  ///   Handle leve para um `TypeInfo` de `Kind = tkRecord` (issue #45).
-  ///   Esta entrega cobre `Name` e `Size` apenas; `GetFields` fica para
-  ///   issue propria condicionada a medir `TRecordElement.Name` num FPC
-  ///   vivo.
+  ///   Descritor imutavel de um campo de record devolvido por
+  ///   <see cref="TModernRTTIRecordType.GetFields"/> (issue #53). Carrega
+  ///   somente tipo e offset — nao carrega `Name` (issue-filha
+  ///   condicionada a FPC >= 3.3 tornar `TManagedField.Name` ou
+  ///   equivalente disponivel). Sem `GetValue`/`SetValue`: record nao tem
+  ///   `TObject`; se um consumidor precisar ler/escrever campo de record
+  ///   via ponteiro, vira issue propria (D-53.2).
+  /// </summary>
+  TModernRTTIRecordField = record
+  strict private
+    FFieldType: PTypeInfo;
+    FOffset: Integer;
+  public
+    /// <summary>
+    ///   Factory interna — chamada pelos backends para construir handles
+    ///   neutros. Nao valida `Kind` do `AFieldType`: a guarda por `Kind`
+    ///   do record que produziu este campo vive nos backends via
+    ///   `RecordRaiseWrongKind`.
+    /// </summary>
+    class function Create(AFieldType: PTypeInfo; AOffset: Integer): TModernRTTIRecordField; static;
+    /// <summary>Handle `PTypeInfo` do tipo do campo.</summary>
+    property FieldType: PTypeInfo read FFieldType;
+    /// <summary>Offset em bytes do campo dentro do layout do record.</summary>
+    property Offset: Integer read FOffset;
+  end;
+
+  /// <summary>
+  ///   Handle leve para um `TypeInfo` de `Kind = tkRecord` (issues #45 e
+  ///   #53). Expoe `Name`, `Size` e `GetFields` — os tres membros
+  ///   publicos do handle. `GetFields` devolve um
+  ///   `TArray<TModernRTTIRecordField>` (tipo + offset). O `Name` do
+  ///   campo individual nao e exposto por `TModernRTTIRecordField` —
+  ///   vive em issue-filha condicionada a FPC >= 3.3 tornar
+  ///   `TManagedField.Name` (ou equivalente) disponivel (D-53.1).
   /// </summary>
   /// <remarks>
   ///   Padrao consagrado da familia (`TModernRTTIEnumerationType` da issue
   ///   #43, `TModernRTTIPointerType` da issue #44): `strict private
   ///   FToken: PTypeInfo`, `FromTypeInfo` sem guarda de `Kind` (D-1 /
-  ///   D-45.1 — a guarda vive nos backends via D-4), `Name` e `Size`
-  ///   publicos que delegam ao backend selecionado pelo unico `{$IFDEF}`
-  ///   da unit.
+  ///   D-45.1 — a guarda vive nos backends via D-4), membros publicos que
+  ///   delegam ao backend selecionado pelo unico `{$IFDEF}` da unit.
   ///
   ///   `record end` (record vazio) e valido nos seis alvos e tem
-  ///   `Size = 0` (D-45.8) — nenhuma guarda rejeita por `Size`.
+  ///   `Size = 0` (D-45.8) — nenhuma guarda rejeita por `Size`. Para
+  ///   `record end` `GetFields` devolve array vazio.
   /// </remarks>
   TModernRTTIRecordType = record
   strict private
@@ -768,6 +798,21 @@ type
     ///   ambos usam `GetTypeData(P)^.RecSize` (D-45.3 / D-45.6).
     /// </remarks>
     function Size: Integer;
+    /// <summary>
+    ///   Enumera os campos do record devolvendo tipo e offset de cada um,
+    ///   na ordem de declaracao. Cross-compiler: mesmo shape nos dois
+    ///   backends. `Name` do campo nao e exposto — vive na issue-filha
+    ///   condicionada a FPC >= 3.3.
+    /// </summary>
+    /// <remarks>
+    ///   Levanta `EModernRTTIError` quando o `FToken` tem `Kind` diferente
+    ///   de `tkRecord` (D-4). No Delphi delega a
+    ///   `TRttiRecordType.GetFields`; no FPC 3.2.2 le
+    ///   `GetTypeData(P)^.TotalFieldCount` e caminha por `PManagedField`
+    ///   (Q1 fechada — ver D-53.8) — nunca `ManagedFldCount` (D-45.7).
+    ///   `record end` (Size = 0) devolve array vazio, valido nos seis alvos.
+    /// </remarks>
+    function GetFields: TArray<TModernRTTIRecordField>;
   end;
 
   /// <summary>
@@ -1349,6 +1394,25 @@ end;
 function TModernRTTIRecordType.Size: Integer;
 begin
   Result := RecordTypeSize(FToken);
+end;
+
+function TModernRTTIRecordType.GetFields: TArray<TModernRTTIRecordField>;
+begin
+  // Issue #53 / D-53.1: mesma superficie nos dois backends. A guarda por
+  // Kind (D-4) vive em RecordGetFields (via RecordRaiseWrongKind).
+  Result := RecordGetFields(FToken);
+end;
+
+{ TModernRTTIRecordField }
+
+class function TModernRTTIRecordField.Create(AFieldType: PTypeInfo;
+  AOffset: Integer): TModernRTTIRecordField;
+begin
+  // D-53.2: descritor imutavel — dois assignments triviais. Sem guarda de
+  // Kind aqui (a guarda do RECORD que produziu este campo vive nos
+  // backends via RecordRaiseWrongKind, chamada em RecordGetFields).
+  Result.FFieldType := AFieldType;
+  Result.FOffset    := AOffset;
 end;
 
 { TModernRTTIArrayType }

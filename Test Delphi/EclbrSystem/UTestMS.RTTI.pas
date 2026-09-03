@@ -154,6 +154,12 @@ type
     [Test]
     procedure TestRecordType_NameAndSize;
 
+    // issue #53 — TModernRTTIRecordType.GetFields. UMA [Test] (D-7)
+    // delegando ao cenario compartilhado; internamente afirma
+    // contagem/tipo/offset dos quatro campos de TRecordFixture53.
+    [Test]
+    procedure TestRecordType_GetFields_TipoEOffset;
+
     // issue #46 — TModernRTTIArrayType + TModernRTTISetType. QUATRO [Test]
     // delegando aos cenarios compartilhados (padrao "um cenario, duas
     // cascas"). Contagem passa de 35 -> 39 [Test].
@@ -377,6 +383,13 @@ end;
 procedure TTestModernRTTI.TestRecordType_NameAndSize;
 begin
   Scenario_RecordType_NameAndSize;
+end;
+
+// --- Issue #53 ---------------------------------------------------------------
+
+procedure TTestModernRTTI.TestRecordType_GetFields_TipoEOffset;
+begin
+  Scenario_RecordType_GetFields_TipoEOffset;
 end;
 
 // --- Issue #46 ---------------------------------------------------------------

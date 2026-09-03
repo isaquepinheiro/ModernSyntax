@@ -126,6 +126,7 @@ function PointerTypeReferredType(P: PTypeInfo): TModernRTTIType;
 
 function RecordTypeName(P: PTypeInfo): string;
 function RecordTypeSize(P: PTypeInfo): Integer;
+function RecordGetFields(P: PTypeInfo): TArray<TModernRTTIRecordField>;
 
 // --- Array & Set (issue #46) -------------------------------------------------
 
@@ -659,6 +660,33 @@ begin
   // retorna ManagedFldCount = 2 — leitura da uniao).
   RecordRaiseWrongKind(P);
   Result := GetTypeData(P)^.RecSize;
+end;
+
+function RecordGetFields(P: PTypeInfo): TArray<TModernRTTIRecordField>;
+var
+  LTypeData: PTypeData;
+  LCount, I: Integer;
+  LField: PManagedField;
+begin
+  // D-4/D-45.5: guarda por Kind aberta primeiro. `record end` valido:
+  // TotalFieldCount pode ser 0 e array vazio e correto.
+  RecordRaiseWrongKind(P);
+  // Q1 fechada (D-53.8): TotalFieldCount vive em TTypeData direta, NAO em
+  // RecInitData^. RecInitData^.ManagedFieldCount = 2 / 4 na fixture mista
+  // — descartaria A e B em silencio (D-45.7). O array de PManagedField
+  // (com TODOS os campos) fica imediatamente apos TotalFieldCount na
+  // memoria do TTypeData. `LField^.FldOffset` e do tipo nativo
+  // (PtrInt/SizeInt); a conversao para Integer preserva o padrao ja
+  // usado por RecSize e nao ha record real com offset > MaxInt.
+  LTypeData := GetTypeData(P);
+  LCount    := LTypeData^.TotalFieldCount;
+  LField    := PManagedField(PByte(@LTypeData^.TotalFieldCount) + SizeOf(Integer));
+  SetLength(Result, LCount);
+  for I := 0 to LCount - 1 do
+  begin
+    Result[I] := TModernRTTIRecordField.Create(LField^.TypeRef, Integer(LField^.FldOffset));
+    Inc(LField);
+  end;
 end;
 
 // --- Array (issue #46) -------------------------------------------------------
