@@ -35,6 +35,7 @@ correspondente e o ciclo ativo.
 | 024 | [#62](https://github.com/isaquepinheiro/ModernSyntax/issues/62) | "docs(rtti): corrigir XMLDoc TModernVisibility, remarks Attributes e comentarios do cenario NilHandle — sete edicoes em 4 arquivos Pascal, nenhuma linha executavel muda." | 📤 PR aberto — [#63](https://github.com/isaquepinheiro/ModernSyntax/pull/63) |
 | 025 | [#60](https://github.com/isaquepinheiro/ModernSyntax/issues/60) | "fix(rtti-fpc): else raise EModernRTTIError no PropertyVisibility do backend FPC — resourcestring SFPCUnknownVisibility + guarda fail-loud + comentario reescrito + XMLDoc corrigido. 4 edicoes em 2 arquivos." | 📤 PR aberto — [#65](https://github.com/isaquepinheiro/ModernSyntax/pull/65) |
 | 026 | [#66](https://github.com/isaquepinheiro/ModernSyntax/issues/66) | "docs(rtti): corrigir remarks falso de TModernRTTIProperty.Visibility — reescrever remarks (RTTI.pas:161-167) e alinhar citacao de ADR (987-990); 2 edicoes documentais, zero linhas executaveis." | 📤 PR aberto — [#67](https://github.com/isaquepinheiro/ModernSyntax/pull/67) |
+| 026 | [#6](https://github.com/isaquepinheiro/ModernSyntax/issues/6) | chore(docs): corrigir 10 itens de texto no bundle OKF — numeros divergentes e ancoras fora do lugar em 4 arquivos de analise; 1 commit; zero mudancas em Source/ | 📤 PR aberto |
 
 ## Legenda
 
@@ -212,6 +213,13 @@ de ADR em `:987-990` para a forma canônica
 `D-42.2/D-51.1/D-60.1 do ADR issues #42/#51/#60`. Zero linhas executáveis
 mudam. Pré-condição: PR #65 deve estar mergeado. Build FPC 3.2.2 x86_64
 obrigatório; contagem de testes permanece 42.
+
+**Ciclo 026** — MAESTRO MODE. A issue #6 é a demanda oficial deste ciclo
+(intake do maestro: `aefos:investigated`). Nenhuma issue ou Epic adicional criada.
+Demanda: aplicar 10 correções de texto em `.project/analysis/` — números divergentes
+e âncoras fora do lugar em 4 arquivos (`03-architecture.md`, `02-stack.md`,
+`04-domain.md`, `05-conventions.md`); itens 11 e `.inc` verificados sem edição;
+1 commit; zero mudanças em `Source/`.
 
 **Ciclo 017** — MAESTRO MODE. A issue #44 é a demanda oficial deste ciclo
 (intake do maestro: `aefos:running`). Nenhuma issue ou Epic adicional criada.

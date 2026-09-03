@@ -59,7 +59,7 @@ that form the library's API surface — internal helper records are excluded.
 | `TOption<T>` | `record` | `ModernSyntax.Option.pas:48` | `FHasValue: Boolean` (line 50) |
 | `TResultPair<S,F>` | `record` | `ModernSyntax.ResultPair.pas:57` | `TResultType` enum: `rtNone`, `rtSuccess`, `rtFailure` (line 25) |
 | `TMatch<T>` | `record` | `ModernSyntax.Match.pas:63` | `TMatchSession` enum: `sMatch`, `sGuard`, `sCase`, `sDefault`, `sTryExcept` (line 57) |
-| `TFuture` | `record` | `ModernSyntax.pas:32` | `FValue: TValue` + `FError: String`; `.IsOk`/`.IsErr` accessors (lines 180-210) |
+| `TFuture` | `record` | `ModernSyntax.pas:32` | `FValue: TValue` + `FErr: String`; `.IsOk`/`.IsErr` accessors (lines 180-210) |
 | `TSafeTry` | `record` | `ModernSyntax.Safetry.pas:42` | wraps a try block; `.&End` returns `TSafeResult` (line 54 — `End` is a reserved word; method is declared `function &End`) |
 | `TSafeResult` | `record` | `ModernSyntax.Safetry.pas:23` | `.IsOk`, `.IsErr`, `.GetValue`, `.ExceptionMessage` (lines 33-38) |
 
@@ -134,7 +134,7 @@ Named operations (confirmed lines 200-329): `Compose`, `Partial`, `Memoize`,
 | Entity | Kind | Defined at | Notes |
 |---|---|---|---|
 | `TModernStreamReader` | `class` | `ModernSyntax.Stream.pas:40` | lazy text-line pipeline |
-| `TSet<T>` | `class sealed` | `ModernSyntax.pas:88` | `TDictionary<T,Byte>`-backed set |
+| `TSet<T>` | `class sealed` | `ModernSyntax.pas:88` | `TDictionary<T, Boolean>`-backed set |
 | `TTuple<K>` | `record` | `ModernSyntax.Tuple.pas:46` | typed key-indexed tuple |
 | `TTuple` | `record` | `ModernSyntax.Tuple.pas:68` | untyped `array of TValue` tuple |
 
@@ -253,7 +253,7 @@ cached value immediately (line 157).
 **RN-007 — TAsync continuations run on the main-thread message queue.**
 `TThread.Queue` (confirmed lines 227, 271, 313) posts continuations to the
 main-thread message loop — not `TThread.Synchronize`. A blocked main thread
-will therefore never receive the continuation.
+will therefore never receive the continuation. G-08 notes this has not been measured.
 
 **RN-008 — TResultPair.New creates an rtNone (uninitialized) container.**
 `TResultPair<S,F>.New` calls `Create(TResultType.rtNone)` (line 823).
@@ -390,7 +390,8 @@ API.
 `TThread.Queue` (lines 227, 271, 313) posts continuations to the main-thread
 message loop. An application whose main thread blocks (e.g., on a modal wait
 loop) will not drain the queue, and the continuation will never execute. This
-risk is not documented in the source.
+risk is not documented in the source. See G-08 (`06-gaps-and-risks.md:268`),
+which rebuffs this to "has not been measured".
 
 **D-05 — Four units have no test program and no XML-doc specification.**
 `ModernSyntax.ArrowFun`, `ModernSyntax.Coroutine`, `ModernSyntax.Crypt`,
