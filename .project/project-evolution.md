@@ -36,7 +36,7 @@ correspondente e o ciclo ativo.
 | 025 | [#60](https://github.com/isaquepinheiro/ModernSyntax/issues/60) | "fix(rtti-fpc): else raise EModernRTTIError no PropertyVisibility do backend FPC — resourcestring SFPCUnknownVisibility + guarda fail-loud + comentario reescrito + XMLDoc corrigido. 4 edicoes em 2 arquivos." | 📤 PR aberto — [#65](https://github.com/isaquepinheiro/ModernSyntax/pull/65) |
 | 026 | [#66](https://github.com/isaquepinheiro/ModernSyntax/issues/66) | "docs(rtti): corrigir remarks falso de TModernRTTIProperty.Visibility — reescrever remarks (RTTI.pas:161-167) e alinhar citacao de ADR (987-990); 2 edicoes documentais, zero linhas executaveis." | 📤 PR aberto — [#67](https://github.com/isaquepinheiro/ModernSyntax/pull/67) |
 | 026 | [#6](https://github.com/isaquepinheiro/ModernSyntax/issues/6) | chore(docs): corrigir 10 itens de texto no bundle OKF — numeros divergentes e ancoras fora do lugar em 4 arquivos de analise; 1 commit; zero mudancas em Source/ | 📤 PR aberto |
-| 027 | [#53](https://github.com/isaquepinheiro/ModernSyntax/issues/53) | feat(rtti): GetFields de record com tipo e offset cross-compiler — TModernRTTIRecordField (FieldType + Offset) nos dois backends; fixture mista TRecordFixture53; cenario compartilhado; cascas finas; 43/43 FPC | 🔄 in-review |
+| 027 | [#53](https://github.com/isaquepinheiro/ModernSyntax/issues/53) | feat(rtti): GetFields de record com tipo e offset cross-compiler — TModernRTTIRecordField (FieldType + Offset) nos dois backends; fixture mista TRecordFixture53; cenario compartilhado; cascas finas; 43/43 FPC | 📤 PR aberto — [#69](https://github.com/isaquepinheiro/ModernSyntax/pull/69) |
 
 ## Legenda
 
