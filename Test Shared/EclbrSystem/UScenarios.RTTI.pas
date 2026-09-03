@@ -218,6 +218,25 @@ type
     I: Integer;
   end;
 
+  // Fixture para issue #53 (TModernRTTIRecordType.GetFields).
+  // MISTA por construcao (D-53.4 do ADR): quatro campos, tres tipos
+  // distintos, offsets divergentes por bitness em tres das quatro
+  // posicoes (medicao no corpo da issue #53):
+  //
+  //   alvo       A    S    B    T
+  //   i386       0    4    8   16
+  //   x86_64     0    8   16   24
+  //
+  // Mata mutacao "backend devolve ordem fixa", "backend nao le padding"
+  // e "backend confunde managed com contagem". Reusar TRecordFixture45
+  // ou TRecordFixture45M seria homogeneo demais (ver ADR D-53.4).
+  TRecordFixture53 = record
+    A: Integer;
+    S: string;
+    B: Double;
+    T: string;
+  end;
+
   // Fixtures para issue #46 (TModernRTTIArrayType + TModernRTTISetType).
   // Declaracoes na secao `type` da `interface` (D-5) para que os cenarios
   // e as duas cascas de teste enxerguem o mesmo tipo.
@@ -327,6 +346,16 @@ procedure Scenario_NilHandle_AllMembers_Raises;
 // a constante 8. So por igualdade (`Size = SizeOf(T)`) — desigualdade
 // `>=` nao prova nada contra backend constante.
 procedure Scenario_RecordType_NameAndSize;
+// Cenario da issue #53 — TModernRTTIRecordType.GetFields. UM unico
+// cenario compartilhado (D-7 "um cenario, duas cascas"). Fixture mista
+// (TRecordFixture53) mata "backend devolve ordem fixa", "backend nao le
+// padding" e "backend confunde managed com contagem" — ver ADR D-53.4.
+// Offsets vem do proprio compilador via NativeInt(@R.<campo>) - NativeInt(@R)
+// (D-53.5): NAO literal por bitness, NAO {$IFDEF CPU64}, NAO SizeOf
+// acumulado (quebra por padding). Tipos por identidade contra
+// TypeInfo(<tipo>) (D-53.6): NAO por .Name (Delphi diz "Integer", FPC diz
+// "LongInt"). Ordem POSICIONAL exata (D-53.7): nao apenas contagem/conjunto.
+procedure Scenario_RecordType_GetFields_TipoEOffset;
 // Cenarios da issue #46 — TModernRTTIArrayType + TModernRTTISetType.
 // Quatro cenarios compartilhados (D-7 "um cenario, duas cascas"). Duas
 // mutacoes obrigatorias (D-46.9): Mutacao 1 cai no cenario 8 (unmanaged);
@@ -1292,7 +1321,7 @@ begin
       '(contrato de nil-handle da issue #49).');
 end;
 
-// --- Issue #45 — TModernRTTIRecordType ---------------------------------------
+// --- Issue #45 e #53 — TModernRTTIRecordType ---------------------------------
 
 procedure Scenario_RecordType_NameAndSize;
 var
@@ -1319,6 +1348,40 @@ begin
     Fail('Name(TRecordFixture45M) inesperado.');
   if LRecM.Size <> SizeOf(TRecordFixture45M) then
     Fail('Size(TRecordFixture45M) != SizeOf(TRecordFixture45M).');
+end;
+
+procedure Scenario_RecordType_GetFields_TipoEOffset;
+var
+  LFields: TArray<TModernRTTIRecordField>;
+  R: TRecordFixture53;
+  LEspA, LEspS, LEspB, LEspT: NativeInt;
+begin
+  // D-53.5: offset esperado vem do proprio compilador em uso, sobre o
+  // proprio record — nao literal por bitness, nao {$IFDEF CPU64}, nao
+  // SizeOf acumulado (que quebra por padding: SizeOf(A) = 4, mas S em 8
+  // no x86_64 — tabela medida no corpo da issue #53).
+  LEspA := NativeInt(@R.A) - NativeInt(@R);
+  LEspS := NativeInt(@R.S) - NativeInt(@R);
+  LEspB := NativeInt(@R.B) - NativeInt(@R);
+  LEspT := NativeInt(@R.T) - NativeInt(@R);
+
+  LFields := TModernRTTIRecordType.FromTypeInfo(TypeInfo(TRecordFixture53)).GetFields;
+
+  if System.Length(LFields) <> 4 then
+    Fail('GetFields(TRecordFixture53) devolveu contagem inesperada.');
+
+  // D-53.6: identidade de handle contra TypeInfo(<tipo>). NAO comparar
+  // .Name do PTypeInfo (Delphi diz "Integer", FPC diz "LongInt" — D-57.3).
+  if LFields[0].FieldType <> TypeInfo(Integer) then Fail('Campo 0: tipo <> Integer.');
+  if LFields[1].FieldType <> TypeInfo(string)  then Fail('Campo 1: tipo <> string.');
+  if LFields[2].FieldType <> TypeInfo(Double)  then Fail('Campo 2: tipo <> Double.');
+  if LFields[3].FieldType <> TypeInfo(string)  then Fail('Campo 3: tipo <> string.');
+
+  // D-53.7: ordem posicional exata.
+  if LFields[0].Offset <> LEspA then Fail('Campo 0 (A): offset diverge do medido.');
+  if LFields[1].Offset <> LEspS then Fail('Campo 1 (S): offset diverge do medido.');
+  if LFields[2].Offset <> LEspB then Fail('Campo 2 (B): offset diverge do medido.');
+  if LFields[3].Offset <> LEspT then Fail('Campo 3 (T): offset diverge do medido.');
 end;
 
 // --- Issue #46 — TModernRTTIArrayType + TModernRTTISetType -------------------

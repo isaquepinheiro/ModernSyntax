@@ -104,6 +104,7 @@ function PointerTypeReferredType(P: PTypeInfo): TModernRTTIType;
 
 function RecordTypeName(P: PTypeInfo): string;
 function RecordTypeSize(P: PTypeInfo): Integer;
+function RecordGetFields(P: PTypeInfo): TArray<TModernRTTIRecordField>;
 
 // --- Array & Set (issue #46) -------------------------------------------------
 
@@ -593,6 +594,37 @@ begin
   // barato que TRttiType.TypeSize, permitido pela issue como equivalente).
   RecordRaiseWrongKind(P);
   Result := GetTypeData(P)^.RecSize;
+end;
+
+function RecordGetFields(P: PTypeInfo): TArray<TModernRTTIRecordField>;
+var
+  LCtx: TRttiContext;
+  LType: TRttiRecordType;
+  LFields: TArray<TRttiField>;
+  I: Integer;
+begin
+  // D-4/D-53.1: guarda por Kind antes de qualquer alocacao ou criacao de
+  // contexto. LCtx local com try/finally (padrao RecordTypeName :581-587).
+  // Materializar Result INTEIRO dentro do try/finally: os PTypeInfo
+  // devolvidos sobrevivem ao .Free (sao ponteiros para o RTTI persistente
+  // do modulo), mas TRttiField NAO — a iteracao acontece toda dentro do
+  // bloco. LField.Name existe do lado Delphi mas NAO e exposto (D-53.1):
+  // contrato cross-compiler; FPC 3.2.2 nao tem Name em TManagedField
+  // (issue-filha condicionada a FPC >= 3.3).
+  RecordRaiseWrongKind(P);
+  LCtx := TRttiContext.Create;
+  try
+    LType := TRttiRecordType(LCtx.GetType(P));
+    LFields := LType.GetFields;
+    SetLength(Result, System.Length(LFields));
+    for I := 0 to System.Length(LFields) - 1 do
+      Result[I] := TModernRTTIRecordField.Create(
+        LFields[I].FieldType.Handle,
+        LFields[I].Offset
+      );
+  finally
+    LCtx.Free;
+  end;
 end;
 
 // --- Array (issue #46) -------------------------------------------------------

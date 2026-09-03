@@ -36,6 +36,7 @@ correspondente e o ciclo ativo.
 | 025 | [#60](https://github.com/isaquepinheiro/ModernSyntax/issues/60) | "fix(rtti-fpc): else raise EModernRTTIError no PropertyVisibility do backend FPC — resourcestring SFPCUnknownVisibility + guarda fail-loud + comentario reescrito + XMLDoc corrigido. 4 edicoes em 2 arquivos." | 📤 PR aberto — [#65](https://github.com/isaquepinheiro/ModernSyntax/pull/65) |
 | 026 | [#66](https://github.com/isaquepinheiro/ModernSyntax/issues/66) | "docs(rtti): corrigir remarks falso de TModernRTTIProperty.Visibility — reescrever remarks (RTTI.pas:161-167) e alinhar citacao de ADR (987-990); 2 edicoes documentais, zero linhas executaveis." | 📤 PR aberto — [#67](https://github.com/isaquepinheiro/ModernSyntax/pull/67) |
 | 026 | [#6](https://github.com/isaquepinheiro/ModernSyntax/issues/6) | chore(docs): corrigir 10 itens de texto no bundle OKF — numeros divergentes e ancoras fora do lugar em 4 arquivos de analise; 1 commit; zero mudancas em Source/ | 📤 PR aberto |
+| 027 | [#53](https://github.com/isaquepinheiro/ModernSyntax/issues/53) | feat(rtti): GetFields de record com tipo e offset cross-compiler — TModernRTTIRecordField (FieldType + Offset) nos dois backends; fixture mista TRecordFixture53; cenario compartilhado; cascas finas; 43/43 FPC | 📤 PR aberto — [#69](https://github.com/isaquepinheiro/ModernSyntax/pull/69) |
 
 ## Legenda
 
@@ -220,6 +221,19 @@ Demanda: aplicar 10 correções de texto em `.project/analysis/` — números di
 e âncoras fora do lugar em 4 arquivos (`03-architecture.md`, `02-stack.md`,
 `04-domain.md`, `05-conventions.md`); itens 11 e `.inc` verificados sem edição;
 1 commit; zero mudanças em `Source/`.
+
+**Ciclo 027** — MAESTRO MODE. A issue #53 é a demanda oficial deste ciclo
+(intake do maestro: `aefos:investigated`). Nenhuma issue ou Epic adicional criada.
+Demanda: implementar `TModernRTTIRecordType.GetFields: TArray<TModernRTTIRecordField>` —
+record novo `TModernRTTIRecordField` com `FieldType: PTypeInfo` e `Offset: Integer`
+(sem `Name`) em `Source/ModernSyntax.RTTI.pas`; backend FPC lê `TTypeData.TotalFieldCount`
+e caminha `PManagedField` imediatamente após (Q1 fechada — D-53.8); backend Delphi com
+`TRttiContext` local e `try/finally .Free`, sem expor `LField.Name` (D-53.1); fixture mista
+`TRecordFixture53 = record A: Integer; S: string; B: Double; T: string; end;`; cenário
+compartilhado com assertivas de offset por cálculo de endereço e assertivas de tipo por
+identidade de handle; cabeçalho da seção rebatizado para "Issue #45 e #53"; cascas de uma
+linha em FPC (total 43) e Delphi; `Name` fica fora — vira issue-filha `enhancement`+`blocked`.
+Build FPC 3.2.2 x86_64 obrigatório; i386 e 4 alvos Delphi ficam com o autor (D-53.12).
 
 **Ciclo 017** — MAESTRO MODE. A issue #44 é a demanda oficial deste ciclo
 (intake do maestro: `aefos:running`). Nenhuma issue ou Epic adicional criada.

@@ -91,6 +91,10 @@ type
     // cenario, duas cascas") delegando ao cenario compartilhado; quatro
     // assercões internas (Name+Size por fixture).
     procedure TestRecordType_NameAndSize;
+    // issue #53 — TModernRTTIRecordType.GetFields. UMA published (D-7)
+    // delegando ao cenario compartilhado; internamente afirma
+    // contagem/tipo/offset dos quatro campos de TRecordFixture53.
+    procedure TestRecordType_GetFields_TipoEOffset;
     // issue #46 — TModernRTTIArrayType + TModernRTTISetType. QUATRO cenarios
     // compartilhados (D-7 "um cenario, duas cascas"); cada uma linha
     // delegando. Cenario 8 (Dynamic_LengthRaises) carrega a Mutacao 1;
@@ -340,6 +344,13 @@ end;
 procedure TTestModernRTTI.TestRecordType_NameAndSize;
 begin
   Scenario_RecordType_NameAndSize;
+end;
+
+// --- Issue #53 ---------------------------------------------------------------
+
+procedure TTestModernRTTI.TestRecordType_GetFields_TipoEOffset;
+begin
+  Scenario_RecordType_GetFields_TipoEOffset;
 end;
 
 // --- Issue #46 ---------------------------------------------------------------
