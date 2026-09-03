@@ -37,7 +37,7 @@ correspondente e o ciclo ativo.
 | 026 | [#66](https://github.com/isaquepinheiro/ModernSyntax/issues/66) | "docs(rtti): corrigir remarks falso de TModernRTTIProperty.Visibility — reescrever remarks (RTTI.pas:161-167) e alinhar citacao de ADR (987-990); 2 edicoes documentais, zero linhas executaveis." | 📤 PR aberto — [#67](https://github.com/isaquepinheiro/ModernSyntax/pull/67) |
 | 026 | [#6](https://github.com/isaquepinheiro/ModernSyntax/issues/6) | chore(docs): corrigir 10 itens de texto no bundle OKF — numeros divergentes e ancoras fora do lugar em 4 arquivos de analise; 1 commit; zero mudancas em Source/ | 📤 PR aberto |
 | 027 | [#53](https://github.com/isaquepinheiro/ModernSyntax/issues/53) | feat(rtti): GetFields de record com tipo e offset cross-compiler — TModernRTTIRecordField (FieldType + Offset) nos dois backends; fixture mista TRecordFixture53; cenario compartilhado; cascas finas; 43/43 FPC | 📤 PR aberto — [#69](https://github.com/isaquepinheiro/ModernSyntax/pull/69) |
-| 029 | [#13](https://github.com/isaquepinheiro/ModernSyntax/issues/13) | feat(invoker): overload dinamico TValue-based cross-compiler — TModernInvoker.Invoke(AInstance, AName, AArgs, AResultType) com assinatura unica, backends divergentes por IFDEF, fixtures ABI-divergent, cascas assimétricas; 7→14 testes | 🔄 in-review |
+| 029 | [#13](https://github.com/isaquepinheiro/ModernSyntax/issues/13) | feat(invoker): overload dinamico TValue-based cross-compiler — TModernInvoker.Invoke(AInstance, AName, AArgs, AResultType) com assinatura unica, backends divergentes por IFDEF, fixtures ABI-divergent, cascas assimétricas; 7→14 testes | 📤 PR aberto — [#70](https://github.com/isaquepinheiro/ModernSyntax/pull/70) |
 
 ## Legenda
 
