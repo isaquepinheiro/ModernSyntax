@@ -37,6 +37,7 @@ correspondente e o ciclo ativo.
 | 026 | [#66](https://github.com/isaquepinheiro/ModernSyntax/issues/66) | "docs(rtti): corrigir remarks falso de TModernRTTIProperty.Visibility — reescrever remarks (RTTI.pas:161-167) e alinhar citacao de ADR (987-990); 2 edicoes documentais, zero linhas executaveis." | 📤 PR aberto — [#67](https://github.com/isaquepinheiro/ModernSyntax/pull/67) |
 | 026 | [#6](https://github.com/isaquepinheiro/ModernSyntax/issues/6) | chore(docs): corrigir 10 itens de texto no bundle OKF — numeros divergentes e ancoras fora do lugar em 4 arquivos de analise; 1 commit; zero mudancas em Source/ | 📤 PR aberto |
 | 027 | [#53](https://github.com/isaquepinheiro/ModernSyntax/issues/53) | feat(rtti): GetFields de record com tipo e offset cross-compiler — TModernRTTIRecordField (FieldType + Offset) nos dois backends; fixture mista TRecordFixture53; cenario compartilhado; cascas finas; 43/43 FPC | 📤 PR aberto — [#69](https://github.com/isaquepinheiro/ModernSyntax/pull/69) |
+| 029 | [#13](https://github.com/isaquepinheiro/ModernSyntax/issues/13) | feat(invoker): overload dinamico TValue-based cross-compiler — TModernInvoker.Invoke(AInstance, AName, AArgs, AResultType) com assinatura unica, backends divergentes por IFDEF, fixtures ABI-divergent, cascas assimétricas; 7→14 testes | 📤 PR aberto — [#70](https://github.com/isaquepinheiro/ModernSyntax/pull/70) |
 
 ## Legenda
 
@@ -234,6 +235,19 @@ compartilhado com assertivas de offset por cálculo de endereço e assertivas de
 identidade de handle; cabeçalho da seção rebatizado para "Issue #45 e #53"; cascas de uma
 linha em FPC (total 43) e Delphi; `Name` fica fora — vira issue-filha `enhancement`+`blocked`.
 Build FPC 3.2.2 x86_64 obrigatório; i386 e 4 alvos Delphi ficam com o autor (D-53.12).
+
+**Ciclo 029** — MAESTRO MODE. A issue #13 é a demanda oficial deste ciclo
+(re-entrada após plan-gate:on_reject no ciclo 028). Nenhuma issue ou Epic adicional
+criada. Demanda: entregar o overload dinâmico `TModernInvoker.Invoke(AInstance,
+AMethodName, AArgs, AResultType): TValue` com assinatura pública idêntica nos dois
+compiladores e implementação divergente por `{$IFDEF FPC}` — FPC via
+`TObject.MethodAddress` + `Rtti.Invoke` livre (`rtti.pp:583`, alcance `published`);
+Delphi via `TRttiContext.GetType.GetMethod.Invoke` (alcance `public`+`published`);
+fixture ABI-divergente `TDateAndTag = record Stamp: Integer; Tag: string; end;`; 8
+novos cenários compartilhados (`Case_InvokeDynamic_*`); cascas com assimetria
+deliberada (FPC registra `_RaisesOnFPC`, Delphi registra `_OKOnDelphi`); contagem
+7→14; cabeçalho da unit reescrito; um commit. Build FPC 3.2.2 x86_64 obrigatório;
+i386 e alvos Delphi ficam com o autor (D-13.12).
 
 **Ciclo 017** — MAESTRO MODE. A issue #44 é a demanda oficial deste ciclo
 (intake do maestro: `aefos:running`). Nenhuma issue ou Epic adicional criada.
